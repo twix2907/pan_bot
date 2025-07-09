@@ -79,7 +79,7 @@ def handle_consultar_productos(parameters):
     """
     Maneja consultas de productos por categoría
     """
-    categoria = parameters.get('categoria', '')
+    categoria = parameters.get('categoria_producto', '')
     
     if not categoria:
         # Mostrar todas las categorías disponibles

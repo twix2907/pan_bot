@@ -1,0 +1,604 @@
+######################################################################
+# CONFIGURACIÓN ORDENADA DE INTENTS Y ENTITIES PARA DIALOGFLOW       #
+# PANADERÍA JOS Y MAR                                                #
+######################################################################
+
+==============================
+ÍNDICE
+==============================
+1. ENTIDADES (Entities)
+2. INTENTS DETALLADOS
+3. CONTEXTOS RECOMENDADOS
+4. INSTRUCCIONES PARA MARCAR PARÁMETROS
+5. MANEJO DE ERRORES Y FLUJOS ALTERNATIVOS
+6. EJEMPLO DE FLUJO COMPLETO DE PEDIDO
+7. SUGERENCIAS DE MEJORA
+
+====================================================
+1. ENTIDADES (Entities)
+====================================================
+
+| Entidad               | Tipo/Dialogflow           | Ejemplos/Sinónimos                                      |
+|-----------------------|--------------------------|---------------------------------------------------------|
+| @producto             | custom                   | pan francés, ciabatti, baguette, bizcocho, ...           |
+| @categoria_producto   | custom                   | pan salado, pan dulce, pan semidulce, pasteles, bocaditos|
+| @tipo_entrega         | custom                   | delivery, recojo, recoger, tienda                        |
+| @nombre_cliente       | @sys.person              | (nombre de persona)                                      |
+| @telefono_cliente     | @sys.phone-number        | (número de teléfono)                                     |
+| @fecha_entrega        | @sys.date                | (fecha)                                                  |
+
+Ejemplo de @producto:
+pan francés: pan francés, francés, pan frances
+ciabatti: ciabatti, ciabatta
+baguette: baguette, baguetes
+... (agrega todos los productos y sinónimos que maneja la panadería)
+
+====================================================
+2. INTENTS DETALLADOS
+====================================================
+Cada intent está organizado con: frases de entrenamiento, parámetros, respuesta, contextos, acción y si usa webhook.
+
+------------------------------
+2.15 hacer.pedido.productos (Pedido de múltiples productos y cantidades)
+------------------------------
+Permite que el usuario indique varios productos y cantidades en una sola frase.
+**Frases ejemplo:**
+- Quiero 2 baguettes y 1 torta de naranja
+- Me gustaría 3 ciabattis, 2 bizcochos y 1 panetón
+- 5 panes franceses y 2 alfajores
+**Parámetros:**
+| Nombre     | Entidad      | Tipo   | Requerido |
+|------------|--------------|--------|-----------|
+| productos  | @producto    | Lista  | Sí        |
+| cantidades | @sys.number  | Lista  | Sí        |
+**Instrucciones para marcar parámetros:**
+1. Selecciona la palabra o grupo de palabras que corresponde a cada producto y márcalo como @producto.
+2. Selecciona el número que corresponde a la cantidad y márcalo como @sys.number.
+3. Si hay varios productos/cantidades, márcalos en orden (Dialogflow los agrupa en listas).
+4. Marca ambos parámetros como requeridos.
+5. En la sección de parámetros, asegúrate de que ambos estén configurados como lista (icono de lista activado).
+**Respuesta:** ¡Perfecto! ¿Deseas agregar algo más o confirmo tu pedido?
+**Contextos:** esperando_productos (entrada) / esperando_confirmacion (salida)
+**Acción:** hacer.pedido.productos
+**Webhook:** Sí
+
+------------------------------
+2.1 Default Welcome Intent
+------------------------------
+**Frases ejemplo:** Hola | Buenas | Buenos días | Quiero hacer un pedido | Quiero ver productos
+**Respuesta:**
+¡Hola! Bienvenido a Panadería Jos y Mar 🍞 ¿En qué puedo ayudarte hoy?
+1️⃣ Ver productos y precios
+2️⃣ Hacer un pedido
+3️⃣ Información de la panadería
+4️⃣ Hablar con una persona
+**Contextos:** ninguno
+**Acción:** none
+**Parámetros:** ninguno
+**Webhook:** No
+
+------------------------------
+2.2 consultar.productos.categoria
+------------------------------
+**Frases ejemplo:** Quiero ver pan salado | Muéstrame pan dulce | ¿Qué pasteles tienes? | Bocaditos | Panes semidulces
+**Parámetros:**
+| Nombre     | Entidad              | Requerido |
+|------------|----------------------|-----------|
+| categoria  | @categoria_producto  | Opcional  |
+**Respuesta:**
+- Si no hay parámetro: ¿Qué tipo de producto te interesa? 🥖 Pan salado, 🍰 Pan dulce, 🥐 Panes semidulces, 🎂 Pasteles, 🥟 Bocaditos
+- Si hay parámetro: (respuesta del webhook con la lista de productos)
+**Contextos:** ninguno
+**Acción:** consultar.productos.categoria
+**Webhook:** Sí
+
+------------------------------
+2.3 hacer.pedido.inicio
+------------------------------
+**Frases ejemplo:** Quiero hacer un pedido | Me gustaría comprar | Hacer pedido
+**Respuesta:**
+Para hacer tu pedido necesito algunos datos:
+1. ¿Cuál es tu nombre?
+2. ¿Para qué fecha necesitas el pedido? (mínimo 1 día de anticipación)
+3. ¿Prefieres delivery o recoger en tienda?
+4. [Si delivery] ¿Cuál es tu dirección?
+**Contextos:** ninguno (entrada) / esperando_nombre (salida)
+**Acción:** hacer.pedido.inicio
+**Parámetros:** ninguno
+**Webhook:** No
+
+------------------------------
+2.4 hacer.pedido.nombre
+------------------------------
+**Frases ejemplo:** Mi nombre es Juan | Soy María | Juan Pérez
+**Parámetros:**
+| Nombre | Entidad           | Requerido |
+|--------|-------------------|-----------|
+| nombre | @nombre_cliente   | Sí        |
+**Respuesta:** ¿Para qué fecha necesitas el pedido? (mínimo 1 día de anticipación)
+**Contextos:** esperando_nombre (entrada) / esperando_fecha (salida)
+**Acción:** hacer.pedido.nombre
+**Webhook:** No
+
+------------------------------
+2.5 hacer.pedido.fecha
+------------------------------
+**Frases ejemplo:** Para mañana | El 10 de julio | 2025-07-10
+**Parámetros:**
+| Nombre        | Entidad         | Requerido |
+|---------------|-----------------|-----------|
+| fecha_entrega | @fecha_entrega  | Sí        |
+**Respuesta:** ¿Prefieres delivery o recoger en tienda?
+**Contextos:** esperando_fecha (entrada) / esperando_tipo_entrega (salida)
+**Acción:** hacer.pedido.fecha
+**Webhook:** No
+
+------------------------------
+2.6 hacer.pedido.tipo_entrega
+------------------------------
+**Frases ejemplo:** Delivery | Recojo | Quiero recoger
+**Parámetros:**
+| Nombre       | Entidad         | Requerido |
+|--------------|-----------------|-----------|
+| tipo_entrega | @tipo_entrega   | Sí        |
+**Respuesta:**
+- [Si delivery] ¿Cuál es tu dirección?
+- [Si recojo] ¿Deseas agregar alguna nota al pedido?
+**Contextos:** esperando_tipo_entrega (entrada) / esperando_direccion (si delivery) o esperando_nota (si recojo) (salida)
+**Acción:** hacer.pedido.tipo_entrega
+**Webhook:** No
+
+------------------------------
+2.7 hacer.pedido.direccion
+------------------------------
+**Frases ejemplo:** Av. Ejemplo 123 | Calle Falsa 456
+**Parámetros:**
+| Nombre            | Entidad   | Requerido |
+|-------------------|-----------|-----------|
+| direccion_entrega | texto     | Sí (si delivery) |
+**Respuesta:** ¿Deseas agregar alguna nota al pedido?
+**Contextos:** esperando_direccion (entrada) / esperando_nota (salida)
+**Acción:** hacer.pedido.direccion
+**Webhook:** No
+
+------------------------------
+2.8 hacer.pedido.nota
+------------------------------
+**Frases ejemplo:** Sin nota | No | Por favor entregar antes de las 10am
+**Parámetros:**
+| Nombre | Entidad   | Requerido |
+|--------|-----------|-----------|
+| notas  | texto     | Opcional  |
+**Respuesta:** ¡Perfecto! Ahora por favor confirma tu número de teléfono para registrar el pedido.
+**Contextos:** esperando_nota (entrada) / esperando_telefono (salida)
+**Acción:** hacer.pedido.nota
+**Webhook:** No
+
+------------------------------
+2.9 hacer.pedido.telefono
+------------------------------
+**Frases ejemplo:** +51999999999 | 999999999
+**Parámetros:**
+| Nombre   | Entidad             | Requerido |
+|----------|---------------------|-----------|
+| telefono | @telefono_cliente   | Sí        |
+**Respuesta:** ¡Gracias! Ahora confirmo tu pedido...
+**Contextos:** esperando_telefono (entrada)
+**Acción:** hacer.pedido.telefono
+**Webhook:** Sí (hacer.pedido.confirmar)
+
+------------------------------
+2.10 hacer.pedido.confirmar
+------------------------------
+**Descripción:** Se activa cuando ya se tienen todos los datos del pedido.
+**Parámetros enviados al webhook:** nombre, telefono, fecha_entrega, tipo_entrega, direccion_entrega, notas
+**Respuesta:** (respuesta del webhook: confirmación del pedido)
+**Contextos:** esperando_telefono (entrada)
+**Acción:** hacer.pedido.confirmar
+**Webhook:** Sí
+
+------------------------------
+2.11 registrar.cliente
+------------------------------
+**Frases ejemplo:** Quiero registrarme | Mi nombre es Juan y mi teléfono es 999999999
+**Parámetros:**
+| Nombre    | Entidad             | Requerido |
+|-----------|---------------------|-----------|
+| nombre    | @nombre_cliente     | Sí        |
+| telefono  | @telefono_cliente   | Sí        |
+| direccion | texto               | Opcional  |
+**Respuesta:** (respuesta del webhook: registro exitoso)
+**Contextos:** ninguno
+**Acción:** registrar.cliente
+**Webhook:** Sí
+
+------------------------------
+2.12 informacion.panaderia
+------------------------------
+**Frases ejemplo:** ¿Dónde están ubicados? | ¿Cuál es el horario? | ¿Tienen teléfono?
+**Respuesta:**
+📍 Panadería Jos y Mar
+🕐 Horarios: [DEFINIR HORARIOS]
+📍 Ubicación: [DEFINIR DIRECCIÓN]
+📞 Contacto: [DEFINIR TELÉFONO]
+¿Te puedo ayudar en algo más?
+**Contextos:** ninguno
+**Acción:** informacion.panaderia
+**Webhook:** No
+
+------------------------------
+2.13 transferir.humano
+------------------------------
+**Frases ejemplo:** Quiero hablar con una persona | Necesito ayuda
+**Respuesta:** Te transfiero con un asesor humano. Por favor espera un momento.
+**Contextos:** ninguno
+**Acción:** transferir.humano
+**Webhook:** No
+
+------------------------------
+2.14 Default Fallback Intent
+------------------------------
+**Frases ejemplo:** (cualquier frase no reconocida)
+**Respuesta:** Lo siento, no entendí tu mensaje. ¿Puedes intentar de otra forma?
+**Contextos:** ninguno
+**Acción:** none
+**Webhook:** No
+
+====================================================
+3. CONTEXTOS RECOMENDADOS
+====================================================
+esperando_nombre, esperando_fecha, esperando_tipo_entrega, esperando_direccion, esperando_nota, esperando_telefono
+
+====================================================
+4. INSTRUCCIONES CLARAS PARA MARCAR PARÁMETROS EN DIALOGFLOW
+====================================================
+1. Para entidades personalizadas (@producto):
+   - Selecciona el nombre del producto en la frase de entrenamiento y márcalo como @producto.
+   - Agrega todos los productos y sinónimos en la entidad @producto.
+2. Para cantidades:
+   - Selecciona el número y márcalo como @sys.number.
+   - Si hay varios productos/cantidades, márcalos en orden (Dialogflow los agrupa en listas).
+3. Para parámetros requeridos:
+   - Marca el parámetro como requerido (checkbox en la columna "Requerido").
+4. Para listas:
+   - Activa el icono de lista en la columna de parámetros para productos y cantidades.
+5. Para intents secuenciales:
+   - Usa contextos de entrada y salida para controlar el flujo (ejemplo: esperando_nombre, esperando_fecha, etc.).
+6. Para intents con webhook:
+   - Activa el webhook solo en intents que requieran lógica de negocio o acceso a base de datos.
+7. Para intents de pedido múltiple:
+   - Usa el intent "hacer.pedido.productos" y sigue los pasos anteriores para marcar productos y cantidades como listas.
+
+====================================================
+5. MANEJO DE ERRORES Y FLUJOS ALTERNATIVOS
+====================================================
+- Si el usuario da un dato inválido (fecha pasada, teléfono incorrecto, etc.), Dialogflow debe pedir el dato de nuevo.
+- Si el usuario quiere cancelar el pedido, crea un intent `cancelar.pedido` con frases como "cancelar", "mejor no" y responde: "Pedido cancelado. ¿Te puedo ayudar en algo más?"
+- Si el usuario pregunta por productos fuera de catálogo, responde: "Por ahora solo tenemos las categorías principales. ¿Te gustaría ver pan salado, pan dulce, panes semidulces, pasteles o bocaditos?"
+
+====================================================
+6. EJEMPLO DE FLUJO COMPLETO DE PEDIDO
+====================================================
+1. Usuario: "Quiero hacer un pedido"
+2. Bot: "¿Cuál es tu nombre?"
+3. Usuario: "Juan Pérez"
+4. Bot: "¿Para qué fecha necesitas el pedido?"
+5. Usuario: "Para mañana"
+6. Bot: "¿Prefieres delivery o recoger en tienda?"
+7. Usuario: "Delivery"
+8. Bot: "¿Cuál es tu dirección?"
+9. Usuario: "Av. Ejemplo 123"
+10. Bot: "¿Deseas agregar alguna nota al pedido?"
+11. Usuario: "No"
+12. Bot: "Por favor confirma tu número de teléfono"
+13. Usuario: "+51999999999"
+14. Bot: "¡Gracias! Ahora confirmo tu pedido..."
+15. (Webhook responde con confirmación)
+
+====================================================
+7. SUGERENCIAS DE MEJORA
+====================================================
+- Puedes agregar validaciones simples en Dialogflow para formato de teléfono y fecha.
+- Mantén los intents y entities organizados y documentados en Dialogflow.
+- Usa el webhook solo para lógica de negocio y base de datos, nunca para controlar el flujo conversacional.
+
+====================================================
+# FIN DE LA CONFIGURACIÓN
+====================================================
+# ---
+# 2.15 hacer.pedido.productos (Pedido de múltiples productos y cantidades)
+# ---
+# Este intent permite que el usuario indique varios productos y cantidades en una sola frase.
+#
+# **Training phrases:**
+#   - Quiero 2 baguettes y 1 torta de naranja
+#   - Me gustaría 3 ciabattis, 2 bizcochos y 1 panetón
+#   - 5 panes franceses y 2 alfajores
+#
+# **Parámetros:**
+#   - productos: @producto (lista, requerido)
+#   - cantidades: @sys.number (lista, requerido)
+#
+# **Instrucciones para marcar parámetros:**
+#   1. Selecciona la palabra o grupo de palabras que corresponde a cada producto y márcalo como @producto.
+#   2. Selecciona el número que corresponde a la cantidad y márcalo como @sys.number.
+#   3. Si hay varios productos/cantidades, márcalos en orden (Dialogflow los agrupa en listas).
+#   4. Marca ambos parámetros como requeridos.
+#   5. En la sección de parámetros, asegúrate de que ambos estén configurados como lista (icono de lista activado).
+#
+# **Respuesta:**
+#   - ¡Perfecto! ¿Deseas agregar algo más o confirmo tu pedido?
+#
+# **Contextos de entrada:** esperando_productos
+# **Contextos de salida:** esperando_confirmacion
+# **Acción:** hacer.pedido.productos
+# **Webhook:** Sí
+
+## 2.1 Default Welcome Intent
+- **Training phrases:**
+  - Hola
+  - Buenas
+  - Buenos días
+  - Quiero hacer un pedido
+  - Quiero ver productos
+- **Respuesta:**
+  - ¡Hola! Bienvenido a Panadería Jos y Mar 🍞 ¿En qué puedo ayudarte hoy?
+    1️⃣ Ver productos y precios
+    2️⃣ Hacer un pedido
+    3️⃣ Información de la panadería
+    4️⃣ Hablar con una persona
+- **Contextos de entrada:** ninguno
+- **Contextos de salida:** ninguno
+- **Acción:** none
+- **Parámetros:** ninguno
+- **Webhook:** No
+
+## 2.2 consultar.productos.categoria
+- **Training phrases:**
+  - Quiero ver pan salado
+  - Muéstrame pan dulce
+  - ¿Qué pasteles tienes?
+  - Bocaditos
+  - Panes semidulces
+- **Parámetros:**
+  - categoria: @categoria_producto (opcional)
+- **Respuesta:**
+  - Si no hay parámetro: ¿Qué tipo de producto te interesa? 🥖 Pan salado, 🍰 Pan dulce, 🥐 Panes semidulces, 🎂 Pasteles, 🥟 Bocaditos
+  - Si hay parámetro: (respuesta del webhook con la lista de productos)
+- **Contextos de entrada:** ninguno
+- **Contextos de salida:** ninguno
+- **Acción:** consultar.productos.categoria
+- **Webhook:** Sí
+
+## 2.3 hacer.pedido.inicio
+- **Training phrases:**
+  - Quiero hacer un pedido
+  - Me gustaría comprar
+  - Hacer pedido
+- **Respuesta:**
+  - Para hacer tu pedido necesito algunos datos:
+    1. ¿Cuál es tu nombre?
+    2. ¿Para qué fecha necesitas el pedido? (mínimo 1 día de anticipación)
+    3. ¿Prefieres delivery o recoger en tienda?
+    4. [Si delivery] ¿Cuál es tu dirección?
+- **Contextos de entrada:** ninguno
+- **Contextos de salida:** esperando_nombre
+- **Acción:** hacer.pedido.inicio
+- **Parámetros:** ninguno
+- **Webhook:** No
+
+## 2.4 hacer.pedido.nombre
+- **Training phrases:**
+  - Mi nombre es Juan
+  - Soy María
+  - Juan Pérez
+- **Parámetros:**
+  - nombre: @nombre_cliente (requerido)
+- **Respuesta:**
+  - ¿Para qué fecha necesitas el pedido? (mínimo 1 día de anticipación)
+- **Contextos de entrada:** esperando_nombre
+- **Contextos de salida:** esperando_fecha
+- **Acción:** hacer.pedido.nombre
+- **Webhook:** No
+
+## 2.5 hacer.pedido.fecha
+- **Training phrases:**
+  - Para mañana
+  - El 10 de julio
+  - 2025-07-10
+- **Parámetros:**
+  - fecha_entrega: @fecha_entrega (requerido)
+- **Respuesta:**
+  - ¿Prefieres delivery o recoger en tienda?
+- **Contextos de entrada:** esperando_fecha
+- **Contextos de salida:** esperando_tipo_entrega
+- **Acción:** hacer.pedido.fecha
+- **Webhook:** No
+
+## 2.6 hacer.pedido.tipo_entrega
+- **Training phrases:**
+  - Delivery
+  - Recojo
+  - Quiero recoger
+- **Parámetros:**
+  - tipo_entrega: @tipo_entrega (requerido)
+- **Respuesta:**
+  - [Si delivery] ¿Cuál es tu dirección?
+  - [Si recojo] ¿Deseas agregar alguna nota al pedido?
+- **Contextos de entrada:** esperando_tipo_entrega
+- **Contextos de salida:** esperando_direccion (solo si delivery), esperando_nota (si recojo)
+- **Acción:** hacer.pedido.tipo_entrega
+- **Webhook:** No
+
+## 2.7 hacer.pedido.direccion
+- **Training phrases:**
+  - Av. Ejemplo 123
+  - Calle Falsa 456
+- **Parámetros:**
+  - direccion_entrega: texto libre (requerido si delivery)
+- **Respuesta:**
+  - ¿Deseas agregar alguna nota al pedido?
+- **Contextos de entrada:** esperando_direccion
+- **Contextos de salida:** esperando_nota
+- **Acción:** hacer.pedido.direccion
+- **Webhook:** No
+
+## 2.8 hacer.pedido.nota
+- **Training phrases:**
+  - Sin nota
+  - No
+  - Por favor entregar antes de las 10am
+- **Parámetros:**
+  - notas: texto libre (opcional)
+- **Respuesta:**
+  - ¡Perfecto! Ahora por favor confirma tu número de teléfono para registrar el pedido.
+- **Contextos de entrada:** esperando_nota
+- **Contextos de salida:** esperando_telefono
+- **Acción:** hacer.pedido.nota
+- **Webhook:** No
+
+## 2.9 hacer.pedido.telefono
+- **Training phrases:**
+  - +51999999999
+  - 999999999
+- **Parámetros:**
+  - telefono: @telefono_cliente (requerido)
+- **Respuesta:**
+  - ¡Gracias! Ahora confirmo tu pedido...
+- **Contextos de entrada:** esperando_telefono
+- **Contextos de salida:** (ninguno)
+- **Acción:** hacer.pedido.telefono
+- **Webhook:** Sí (hacer.pedido.confirmar)
+
+## 2.10 hacer.pedido.confirmar
+- **Descripción:**
+  - Este intent se activa cuando ya se tienen todos los datos del pedido.
+- **Parámetros enviados al webhook:**
+  - nombre, telefono, fecha_entrega, tipo_entrega, direccion_entrega, notas
+- **Respuesta:**
+  - (respuesta del webhook: confirmación del pedido)
+- **Contextos de entrada:** esperando_telefono
+- **Contextos de salida:** (ninguno)
+- **Acción:** hacer.pedido.confirmar
+- **Webhook:** Sí
+
+## 2.11 registrar.cliente
+- **Training phrases:**
+  - Quiero registrarme
+  - Mi nombre es Juan y mi teléfono es 999999999
+- **Parámetros:**
+  - nombre: @nombre_cliente (requerido)
+  - telefono: @telefono_cliente (requerido)
+  - direccion: texto libre (opcional)
+- **Respuesta:**
+  - (respuesta del webhook: registro exitoso)
+- **Contextos de entrada:** ninguno
+- **Contextos de salida:** (ninguno)
+- **Acción:** registrar.cliente
+- **Webhook:** Sí
+
+## 2.12 informacion.panaderia
+- **Training phrases:**
+  - ¿Dónde están ubicados?
+  - ¿Cuál es el horario?
+  - ¿Tienen teléfono?
+- **Respuesta:**
+  - 📍 Panadería Jos y Mar
+    🕐 Horarios: [DEFINIR HORARIOS]
+    📍 Ubicación: [DEFINIR DIRECCIÓN]
+    📞 Contacto: [DEFINIR TELÉFONO]
+    ¿Te puedo ayudar en algo más?
+- **Contextos de entrada:** ninguno
+- **Contextos de salida:** ninguno
+- **Acción:** informacion.panaderia
+- **Webhook:** No
+
+## 2.13 transferir.humano
+- **Training phrases:**
+  - Quiero hablar con una persona
+  - Necesito ayuda
+- **Respuesta:**
+  - Te transfiero con un asesor humano. Por favor espera un momento.
+- **Contextos de entrada:** ninguno
+- **Contextos de salida:** ninguno
+- **Acción:** transferir.humano
+- **Webhook:** No
+
+## 2.14 Default Fallback Intent
+- **Training phrases:**
+  - (cualquier frase no reconocida)
+- **Respuesta:**
+  - Lo siento, no entendí tu mensaje. ¿Puedes intentar de otra forma?
+- **Contextos de entrada:** ninguno
+- **Contextos de salida:** ninguno
+- **Acción:** none
+- **Webhook:** No
+
+# ---
+# 3. CONTEXTOS RECOMENDADOS
+# ---
+- esperando_nombre
+- esperando_fecha
+- esperando_tipo_entrega
+- esperando_direccion
+- esperando_nota
+- esperando_telefono
+
+
+# ---
+# 4. INSTRUCCIONES CLARAS PARA MARCAR PARÁMETROS EN DIALOGFLOW
+# ---
+1. **Para entidades personalizadas (@producto):**
+   - Selecciona el nombre del producto en la frase de entrenamiento y márcalo como @producto.
+   - Agrega todos los productos y sinónimos en la entidad @producto.
+2. **Para cantidades:**
+   - Selecciona el número y márcalo como @sys.number.
+   - Si hay varios productos/cantidades, márcalos en orden (Dialogflow los agrupa en listas).
+3. **Para parámetros requeridos:**
+   - Marca el parámetro como requerido (checkbox en la columna "Requerido").
+4. **Para listas:**
+   - Activa el icono de lista en la columna de parámetros para productos y cantidades.
+5. **Para intents secuenciales:**
+   - Usa contextos de entrada y salida para controlar el flujo (ejemplo: esperando_nombre, esperando_fecha, etc.).
+6. **Para intents con webhook:**
+   - Activa el webhook solo en intents que requieran lógica de negocio o acceso a base de datos.
+7. **Para intents de pedido múltiple:**
+   - Usa el intent "hacer.pedido.productos" y sigue los pasos anteriores para marcar productos y cantidades como listas.
+
+# ---
+# 5. MANEJO DE ERRORES Y FLUJOS ALTERNATIVOS
+# ---
+- Si el usuario da un dato inválido (fecha pasada, teléfono incorrecto, etc.), Dialogflow debe pedir el dato de nuevo.
+- Si el usuario quiere cancelar el pedido, crea un intent `cancelar.pedido` con frases como "cancelar", "mejor no" y responde: "Pedido cancelado. ¿Te puedo ayudar en algo más?"
+- Si el usuario pregunta por productos fuera de catálogo, responde: "Por ahora solo tenemos las categorías principales. ¿Te gustaría ver pan salado, pan dulce, panes semidulces, pasteles o bocaditos?"
+
+# ---
+# 6. EJEMPLO DE FLUJO COMPLETO DE PEDIDO
+# ---
+1. Usuario: "Quiero hacer un pedido"
+2. Bot: "¿Cuál es tu nombre?"
+3. Usuario: "Juan Pérez"
+4. Bot: "¿Para qué fecha necesitas el pedido?"
+5. Usuario: "Para mañana"
+6. Bot: "¿Prefieres delivery o recoger en tienda?"
+7. Usuario: "Delivery"
+8. Bot: "¿Cuál es tu dirección?"
+9. Usuario: "Av. Ejemplo 123"
+10. Bot: "¿Deseas agregar alguna nota al pedido?"
+11. Usuario: "No"
+12. Bot: "Por favor confirma tu número de teléfono"
+13. Usuario: "+51999999999"
+14. Bot: "¡Gracias! Ahora confirmo tu pedido..."
+15. (Webhook responde con confirmación)
+
+# ---
+# 7. SUGERENCIAS DE MEJORA
+# ---
+- Puedes agregar validaciones simples en Dialogflow para formato de teléfono y fecha.
+- Mantén los intents y entities organizados y documentados en Dialogflow.
+- Usa el webhook solo para lógica de negocio y base de datos, nunca para controlar el flujo conversacional.
+
+
+# ---
+# FIN DE LA CONFIGURACIÓN
+# ---
