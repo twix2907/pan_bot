@@ -81,6 +81,10 @@ def handle_consultar_productos(parameters):
     """
     categoria = parameters.get('categoria_producto', '')
     
+    # Convertir el formato de categoría para que coincida con la BD
+    if categoria:
+        categoria = categoria.replace(' ', '_')
+    
     if not categoria:
         # Mostrar todas las categorías disponibles
         categorias = get_todas_categorias()
