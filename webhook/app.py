@@ -60,6 +60,8 @@ def webhook():
         # Procesar según el intent
         if intent_name == 'consultar.productos.categoria':
             return handle_consultar_productos(parameters)
+        elif intent_name == 'hacer.pedido.telefono':
+            return handle_confirmar_pedido(parameters)
         elif intent_name == 'hacer.pedido.confirmar':
             return handle_confirmar_pedido(parameters)
         elif intent_name == 'registrar.cliente':
@@ -113,7 +115,7 @@ def handle_registrar_cliente(parameters):
     Maneja el registro de un nuevo cliente
     """
     nombre = parameters.get('nombre', '').strip()
-    telefono = parameters.get('telefono', '').strip()
+    telefono = parameters.get('telefono', '').strip() or parameters.get('phone-number', '').strip()
     direccion = parameters.get('direccion', '').strip()
     
     # Validar datos requeridos
@@ -146,7 +148,7 @@ def handle_confirmar_pedido(parameters):
     Maneja la confirmación de un pedido
     """
     # Extraer parámetros del pedido
-    cliente_telefono = parameters.get('telefono', '')
+    cliente_telefono = parameters.get('telefono', '') or parameters.get('phone-number', '')
     fecha_entrega = parameters.get('fecha_entrega', '')
     tipo_entrega = parameters.get('tipo_entrega', '')
     direccion_entrega = parameters.get('direccion_entrega', '')
