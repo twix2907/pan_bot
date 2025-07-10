@@ -1,4 +1,58 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
+import requests
+import os
+# --- INTEGRACIÓN TWILIO <-> DIALOGFLOW ---
+def enviar_a_dialogflow(texto, session_id):
+    """
+    Envía el texto del usuario a Dialogflow usando la API REST y retorna la respuesta.
+    Requiere que configures el TOKEN de servicio de Google Cloud en la variable de entorno DIALOGFLOW_TOKEN,
+    y el PROJECT_ID en DIALOGFLOW_PROJECT_ID.
+    """
+    project_id = os.getenv('DIALOGFLOW_PROJECT_ID')
+    token = os.getenv('DIALOGFLOW_TOKEN')
+    if not project_id or not token:
+        return {'fulfillmentText': 'Error: Falta configuración de Dialogflow.'}
+    url = f'https://dialogflow.googleapis.com/v2/projects/{project_id}/agent/sessions/{session_id}:detectIntent'
+    headers = {
+        'Authorization': f'Bearer {token}',
+        'Content-Type': 'application/json'
+    }
+    data = {
+        "queryInput": {
+            "text": {
+                "text": texto,
+                "languageCode": "es"
+            }
+        }
+    }
+    try:
+        response = requests.post(url, headers=headers, json=data)
+        if response.status_code == 200:
+            return response.json().get('queryResult', {})
+        else:
+            return {'fulfillmentText': f'Error Dialogflow: {response.text}'}
+    except Exception as e:
+        return {'fulfillmentText': f'Error conectando a Dialogflow: {str(e)}'}
+
+
+# --- ENDPOINT PARA TWILIO ---
+@app.route('/twilio', methods=['POST'])
+def twilio_webhook():
+    """
+    Endpoint para recibir mensajes de Twilio (WhatsApp/SMS) y reenviarlos a Dialogflow.
+    """
+    user_msg = request.form.get('Body')
+    user_number = request.form.get('From')
+    if not user_msg or not user_number:
+        return Response("<Response><Message>Error: Mensaje o número no recibido</Message></Response>", mimetype='application/xml')
+
+    # Llama a Dialogflow API con el mensaje del usuario
+    dialogflow_response = enviar_a_dialogflow(user_msg, session_id=user_number)
+    fulfillment_text = dialogflow_response.get('fulfillmentText', 'Lo siento, no entendí.')
+
+    # Responde a Twilio en formato TwiML
+    twiml = f"""<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Response>\n    <Message>{fulfillment_text}</Message>\n</Response>"""
+    return Response(twiml, mimetype='application/xml')
 import os
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
