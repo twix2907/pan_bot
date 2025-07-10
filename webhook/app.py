@@ -166,7 +166,9 @@ def webhook():
     # OPTIMIZACIÓN: Responder lo más rápido posible, manejo de errores fuera del try principal
     from threading import Thread
     import traceback
+    import time
     try:
+        start_time = time.time()
         # Limpiar sesiones expiradas en background
         Thread(target=limpiar_sesiones_expiradas).start()
 
@@ -179,25 +181,28 @@ def webhook():
         logger.info(f"Intent recibido: {intent_name}")
         logger.info(f"Parámetros: {parameters}")
 
+        # Medir tiempo de ejecución del handler
+        handler_start = time.time()
+
         # Procesamiento rápido: solo lógica, sin esperas ni operaciones pesadas
         if intent_name == 'consultar.productos.categoria':
-            return handle_consultar_productos(parameters)
+            response = handle_consultar_productos(parameters)
         elif intent_name == 'hacer.pedido.productos':
-            return handle_pedido_productos(parameters, req)
+            response = handle_pedido_productos(parameters, req)
         elif intent_name == 'hacer.pedido.nombre':
-            return handle_pedido_nombre(parameters, req)
+            response = handle_pedido_nombre(parameters, req)
         elif intent_name == 'hacer.pedido.fecha':
-            return handle_pedido_fecha(parameters, req)
+            response = handle_pedido_fecha(parameters, req)
         elif intent_name == 'hacer.pedido.delivery':
-            return handle_pedido_delivery(parameters, req)
+            response = handle_pedido_delivery(parameters, req)
         elif intent_name == 'hacer.pedido.recojo':
-            return handle_pedido_recojo(parameters, req)
+            response = handle_pedido_recojo(parameters, req)
         elif intent_name == 'hacer.pedido.direccion':
-            return handle_pedido_direccion(parameters, req)
+            response = handle_pedido_direccion(parameters, req)
         elif intent_name == 'hacer.pedido.nota':
-            return handle_pedido_nota(parameters, req)
+            response = handle_pedido_nota(parameters, req)
         elif intent_name == 'hacer.pedido.telefono':
-            return handle_pedido_telefono(parameters, req)
+            response = handle_pedido_telefono(parameters, req)
         elif intent_name == 'hacer.pedido.confirmar':
             # Confirmar pedido puede ser lento por la BD, responde rápido y procesa en background
             def confirmar_async():
@@ -207,13 +212,20 @@ def webhook():
                     logger.error(f"Error async confirmar: {str(e)}")
                     logger.error(traceback.format_exc())
             Thread(target=confirmar_async).start()
-            return jsonify({'fulfillmentText': '¡Estamos confirmando tu pedido! Te avisaremos en breve.'})
+            response = jsonify({'fulfillmentText': '¡Estamos confirmando tu pedido! Te avisaremos en breve.'})
         elif intent_name == 'registrar.cliente':
-            return handle_registrar_cliente(parameters)
+            response = handle_registrar_cliente(parameters)
         else:
-            return jsonify({
+            response = jsonify({
                 'fulfillmentText': 'Lo siento, no pude procesar tu solicitud. ¿Puedes intentar de nuevo?'
             })
+
+        handler_end = time.time()
+        logger.info(f"[PERF] Tiempo de ejecución del handler: {handler_end - handler_start:.3f} segundos")
+
+        total_end = time.time()
+        logger.info(f"[PERF] Tiempo total /webhook: {total_end - start_time:.3f} segundos")
+        return response
     except Exception as e:
         logger.error(f"Error en webhook: {str(e)}")
         logger.error(traceback.format_exc())
