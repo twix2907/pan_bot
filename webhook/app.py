@@ -211,15 +211,8 @@ def webhook():
         elif intent_name == 'hacer.pedido.telefono':
             response = handle_pedido_telefono(parameters, req)
         elif intent_name == 'hacer.pedido.confirmar':
-            # Confirmar pedido puede ser lento por la BD, responde rápido y procesa en background
-            def confirmar_async():
-                try:
-                    handle_confirmar_pedido(parameters, req)
-                except Exception as e:
-                    logger.error(f"Error async confirmar: {str(e)}")
-                    logger.error(traceback.format_exc())
-            Thread(target=confirmar_async).start()
-            response = jsonify({'fulfillmentText': '¡Estamos confirmando tu pedido! Te avisaremos en breve.'})
+            # Ahora respondemos directamente con la confirmación del pedido
+            response = handle_confirmar_pedido(parameters, req)
         elif intent_name == 'registrar.cliente':
             response = handle_registrar_cliente(parameters)
         else:
