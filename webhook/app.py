@@ -185,33 +185,43 @@ def handle_consultar_productos(parameters):
     Maneja consultas de productos por categoría
     """
     categoria = parameters.get('categoria_producto', '')
-    
+
     # Convertir el formato de categoría para que coincida con la BD
     if categoria:
         categoria = categoria.replace(' ', '_')
-    
-    if not categoria:
-        # Mostrar todas las categorías disponibles
-        categorias = get_todas_categorias()
-        if categorias:
-            texto = "¿Qué tipo de producto te interesa?\n\n"
-            for cat in categorias:
-                texto += f"{formatear_categoria_display(cat['categoria'])}\n"
-            return jsonify({'fulfillmentText': texto})
+
+    try:
+        if not categoria:
+            # Mostrar todas las categorías disponibles
+            categorias = get_todas_categorias()
+            if categorias:
+                texto = "¿Qué tipo de producto te interesa?\n\n"
+                for cat in categorias:
+                    texto += f"{formatear_categoria_display(cat['categoria'])}\n"
+                # Siempre devolver texto aunque esté vacío
+                if not texto.strip():
+                    texto = "No hay categorías disponibles en este momento."
+                return jsonify({'fulfillmentText': texto})
+            else:
+                return jsonify({'fulfillmentText': 'No hay productos disponibles en este momento.'})
+
+        # Obtener productos de la categoría específica
+        productos = get_productos_por_categoria(categoria)
+
+        if productos:
+            texto = f"{formatear_categoria_display(categoria)}:\n\n"
+            texto += formatear_lista_productos(productos)
+            texto += "\n\n¿Te gustaría hacer un pedido o ver otra categoría?"
         else:
-            return jsonify({'fulfillmentText': 'No hay productos disponibles en este momento.'})
-    
-    # Obtener productos de la categoría específica
-    productos = get_productos_por_categoria(categoria)
-    
-    if productos:
-        texto = f"{formatear_categoria_display(categoria)}:\n\n"
-        texto += formatear_lista_productos(productos)
-        texto += "\n\n¿Te gustaría hacer un pedido o ver otra categoría?"
-    else:
-        texto = f"No tenemos productos disponibles en la categoría {formatear_categoria_display(categoria)} en este momento."
-    
-    return jsonify({'fulfillmentText': texto})
+            texto = f"No tenemos productos disponibles en la categoría {formatear_categoria_display(categoria)} en este momento."
+
+        # Siempre devolver texto aunque esté vacío
+        if not texto.strip():
+            texto = "No hay productos disponibles en este momento."
+        return jsonify({'fulfillmentText': texto})
+    except Exception as e:
+        logger.error(f"Error en handle_consultar_productos: {str(e)}")
+        return jsonify({'fulfillmentText': 'Ocurrió un error al consultar los productos. Por favor intenta más tarde.'})
 
 def handle_registrar_cliente(parameters):
     """
