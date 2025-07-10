@@ -95,8 +95,6 @@ from datetime import datetime
 sesiones_activas = {}
 
 
-# Crear aplicación Flask (debe estar antes de cualquier @app.route)
-app = Flask(__name__)
 
 @app.route('/', methods=['GET'])
 def health_check():
