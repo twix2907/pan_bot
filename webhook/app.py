@@ -21,8 +21,8 @@ from utils import (
     generar_mensaje_pedido_confirmacion
 )
 
-# Cargar variables de entorno
-load_dotenv()
+# Cargar variables de entorno desde el directorio del webhook
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -221,18 +221,41 @@ def handle_confirmar_pedido(parameters, req):
     try:
         nombre_cliente = datos_sesion['nombre'] or "Cliente"
         
-        # Aquí podrías guardar en la base de datos si lo deseas
-        # cliente_id = crear_cliente(nombre_cliente, telefono_valido, datos_sesion['direccion_entrega'])
-        # pedido_id = crear_pedido(cliente_id, fecha_valida, datos_sesion['tipo_entrega'], datos_sesion['notas'])
-        # for item in datos_sesion['productos']:
-        #     agregar_item_pedido(pedido_id, item['producto_id'], item['cantidad'])
-        
-        # Generar número de pedido simple
-        import random
-        numero_pedido = f"PED{random.randint(1000, 9999)}"
-        
         # Calcular total
         total_pedido = sum(item['precio'] * item['cantidad'] for item in datos_sesion['productos'])
+        
+        # GUARDAR EN BASE DE DATOS
+        # 1. Crear o obtener cliente
+        cliente_id = crear_cliente(
+            nombre_cliente, 
+            telefono_valido, 
+            datos_sesion.get('direccion_entrega', '')
+        )
+        
+        # 2. Crear pedido
+        pedido_id = crear_pedido(
+            cliente_id, 
+            datos_sesion['fecha_entrega'], 
+            datos_sesion['tipo_entrega'], 
+            datos_sesion.get('direccion_entrega', ''),
+            total_pedido,
+            datos_sesion.get('notas', '')
+        )
+        
+        # 3. Agregar items del pedido
+        for item in datos_sesion['productos']:
+            agregar_item_pedido(
+                pedido_id, 
+                item['producto_id'], 
+                item['cantidad'], 
+                item['precio'],
+                None  # notas del item específico
+            )
+        
+        # Generar número de pedido que incluya el ID real de la BD
+        numero_pedido = f"PED{pedido_id:04d}"
+        
+        logger.info(f"Pedido guardado en BD - ID: {pedido_id}, Cliente ID: {cliente_id}, Total: {total_pedido}")
         
         mensaje_final = f"¡Excelente! 🎉\n\n"
         mensaje_final += f"Tu pedido #{numero_pedido} ha sido confirmado:\n\n"
@@ -268,8 +291,10 @@ def handle_confirmar_pedido(parameters, req):
         
     except Exception as e:
         logger.error(f"Error procesando pedido: {str(e)}")
+        import traceback
+        logger.error(f"Traceback completo: {traceback.format_exc()}")
         return jsonify({
-            'fulfillmentText': 'Hubo un problema al procesar tu pedido. Por favor intenta nuevamente.'
+            'fulfillmentText': f'Hubo un problema al procesar tu pedido: {str(e)}. Por favor intenta nuevamente.'
         })
 
 def handle_pedido_telefono(parameters, req):

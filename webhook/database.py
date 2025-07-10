@@ -2,8 +2,8 @@ import mysql.connector
 import os
 from dotenv import load_dotenv
 
-# Cargar variables de entorno
-load_dotenv()
+# Cargar variables de entorno desde el directorio del webhook
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 def get_db_connection():
     """

@@ -54,11 +54,24 @@ def crear_pedido(cliente_id, fecha_entrega, tipo_entrega, direccion_entrega, tot
     """
     Crea un nuevo pedido
     """
+    # Si fecha_entrega es texto descriptivo, usar fecha de mañana por defecto
+    from datetime import datetime, timedelta
+    try:
+        # Intentar parsear como fecha ISO
+        if isinstance(fecha_entrega, str) and '-' in fecha_entrega:
+            fecha_entrega_date = datetime.strptime(fecha_entrega, '%Y-%m-%d').date()
+        else:
+            # Si es texto descriptivo, usar mañana
+            fecha_entrega_date = (datetime.now() + timedelta(days=1)).date()
+    except:
+        # En caso de error, usar mañana
+        fecha_entrega_date = (datetime.now() + timedelta(days=1)).date()
+    
     query = """
-    INSERT INTO pedidos (cliente_id, fecha_entrega, tipo_entrega, direccion_entrega, total, notas) 
-    VALUES (%s, %s, %s, %s, %s, %s)
+    INSERT INTO pedidos (cliente_id, fecha_entrega, tipo_entrega, direccion_entrega, estado, total, notas) 
+    VALUES (%s, %s, %s, %s, 'confirmado', %s, %s)
     """
-    return execute_insert(query, (cliente_id, fecha_entrega, tipo_entrega, direccion_entrega, total, notas))
+    return execute_insert(query, (cliente_id, fecha_entrega_date, tipo_entrega, direccion_entrega, total, notas))
 
 def agregar_item_pedido(pedido_id, producto_id, cantidad, precio_unitario, notas=None):
     """
