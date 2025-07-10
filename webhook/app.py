@@ -1,4 +1,3 @@
-
 import os
 import tempfile
 import base64
@@ -88,6 +87,11 @@ def twilio_webhook():
     end_df = time.time()
     logger.info(f"[Twilio] Tiempo llamada a Dialogflow: {end_df - start_df:.3f} segundos")
     logger.info(f"[Twilio] Respuesta Dialogflow: {dialogflow_response}")
+    # Log extra: fulfillmentText y parámetros
+    logger.info(f"[Twilio] fulfillmentText recibido: {dialogflow_response.get('fulfillmentText')}")
+    logger.info(f"[Twilio] intent: {dialogflow_response.get('intent')}")
+    logger.info(f"[Twilio] parameters: {dialogflow_response.get('parameters')}")
+    logger.info(f"[Twilio] outputContexts: {dialogflow_response.get('outputContexts')}")
     fulfillment_text = dialogflow_response.get('fulfillmentText', None)
     logger.info(f"[Twilio] fulfillmentText recibido: {repr(fulfillment_text)}")
     if not fulfillment_text:
@@ -174,6 +178,9 @@ def webhook():
 
         req = request.get_json()
         logger.info(f"[DEBUG] JSON recibido en /webhook: {req}")
+        # Log extra: headers y remote_addr
+        logger.info(f"[DEBUG] Headers: {dict(request.headers)}")
+        logger.info(f"[DEBUG] Remote addr: {request.remote_addr}")
         intent_name = req.get('queryResult', {}).get('intent', {}).get('displayName', '')
         parameters = req.get('queryResult', {}).get('parameters', {})
         query_text = req.get('queryResult', {}).get('queryText', '')
