@@ -28,6 +28,14 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Storage temporal para productos por sesión - VERSION MEJORADA
+# Formato: {session_id: {'productos': [...], 'timestamp': datetime, 'datos_pedido': {}}}
+import time
+from datetime import datetime
+
+# Diccionario mejorado para storage
+sesiones_activas = {}
+
 # Crear aplicación Flask
 app = Flask(__name__)
 
@@ -48,6 +56,9 @@ def webhook():
     Webhook principal para Dialogflow
     """
     try:
+        # Limpiar sesiones expiradas cada cierto tiempo
+        limpiar_sesiones_expiradas()
+        
         # Obtener datos del request de Dialogflow
         req = request.get_json()
         
@@ -235,6 +246,10 @@ def handle_confirmar_pedido(parameters, req):
         mensaje_final += f"\nNos pondremos en contacto contigo para coordinar los detalles.\n"
         mensaje_final += f"¡Gracias por elegir Panadería Jos y Mar! 🥖✨"
         
+        # Limpiar productos de sesión después de confirmar pedido
+        session_id = obtener_session_id(req)
+        limpiar_productos_sesion(session_id)
+        
         return jsonify({
             'fulfillmentText': mensaje_final
         })
@@ -249,6 +264,13 @@ def handle_pedido_telefono(parameters, req):
     """
     Maneja específicamente cuando se recibe el teléfono en el flujo de pedido
     """
+    # Obtener session ID
+    session_id = obtener_session_id(req)
+    logger.info(f"Procesando teléfono para session_id: {session_id}")
+    
+    # Debug: mostrar el estado actual de sesiones
+    debug_estado_sesiones()
+    
     # Extraer datos de parámetros directos y contextos
     datos_directos = {
         'telefono': parameters.get('telefono', '') or parameters.get('phone-number', ''),
@@ -267,7 +289,11 @@ def handle_pedido_telefono(parameters, req):
     for key in ['telefono', 'fecha_entrega', 'tipo_entrega', 'direccion_entrega', 'nombre', 'notas']:
         datos_finales[key] = datos_directos.get(key) or datos_contexto.get(key, '')
     
+    # Obtener productos de la sesión
+    productos_sesion = obtener_productos_sesion(session_id)
+    
     logger.info(f"Datos del pedido en teléfono - Datos finales: {datos_finales}")
+    logger.info(f"Productos en sesión: {len(productos_sesion)} items")
     
     # Validar teléfono
     if not datos_finales['telefono']:
@@ -284,6 +310,23 @@ def handle_pedido_telefono(parameters, req):
     # Crear mensaje de confirmación con todos los datos disponibles
     mensaje_confirmacion = f"Perfecto! He registrado tu teléfono: {telefono_valido}\n\n"
     mensaje_confirmacion += "Resumen de tu pedido:\n"
+    
+    # Mostrar productos si existen
+    if productos_sesion:
+        mensaje_confirmacion += "\n🛒 Productos:\n"
+        total_pedido = 0
+        for item in productos_sesion:
+            cantidad = item['cantidad']
+            producto = item['producto']
+            precio_unitario = item.get('precio', 0)
+            precio_total = precio_unitario * cantidad
+            total_pedido += precio_total
+            
+            mensaje_confirmacion += f"• {cantidad}x {producto} - S/ {precio_total:.2f}\n"
+        
+        mensaje_confirmacion += f"\n💰 Subtotal: S/ {total_pedido:.2f}\n"
+    else:
+        mensaje_confirmacion += "\n⚠️ No hay productos en el pedido\n"
     
     if datos_finales['nombre']:
         mensaje_confirmacion += f"👤 Cliente: {datos_finales['nombre']}\n"
@@ -308,6 +351,9 @@ def handle_pedido_productos(parameters, req):
     productos = parameters.get('producto', [])
     cantidades = parameters.get('number', [])
     
+    # Obtener session ID
+    session_id = obtener_session_id(req)
+    
     # Asegurar que sean listas
     if not isinstance(productos, list):
         productos = [productos] if productos else []
@@ -320,10 +366,13 @@ def handle_pedido_productos(parameters, req):
             'fulfillmentText': 'No pude identificar los productos que deseas. ¿Puedes especificar qué productos te gustaría comprar?\n\nEjemplo: "Quiero 2 baguettes y 1 torta de chocolate"'
         })
     
+    # Obtener productos existentes de la sesión (por si está agregando más)
+    productos_existentes = obtener_productos_sesion(session_id)
+    
     # Crear lista de productos del pedido
-    items_pedido = []
+    items_pedido = list(productos_existentes)  # Copiar existentes
     mensaje_productos = ""
-    total_items = 0
+    total_items = sum(item['cantidad'] for item in productos_existentes)
     productos_no_encontrados = []
     
     # Procesar cada producto
@@ -383,9 +432,33 @@ def handle_pedido_productos(parameters, req):
         mensaje += "¿Podrías especificar los productos de otra manera?\n"
         mensaje += "Por ejemplo: 'baguette', 'pan francés', 'torta de chocolate', etc."
     
+    # Guardar productos en sesión (usar el session_id ya obtenido)
+    guardar_productos_sesion(session_id, items_pedido)
+    
     return jsonify({
         'fulfillmentText': mensaje
     })
+
+@app.route('/debug/sesiones', methods=['GET'])
+def debug_sesiones():
+    """
+    Endpoint para ver el estado actual de las sesiones (solo para desarrollo)
+    """
+    global sesiones_activas
+    result = {
+        'total_sesiones': len(sesiones_activas),
+        'sesiones': {}
+    }
+    
+    for session_id, data in sesiones_activas.items():
+        result['sesiones'][session_id] = {
+            'productos_count': len(data['productos']),
+            'productos': data['productos'],
+            'timestamp': data['timestamp'].strftime('%Y-%m-%d %H:%M:%S'),
+            'datos_pedido': data.get('datos_pedido', {})
+        }
+    
+    return jsonify(result)
 
 @app.route('/productos/<categoria>', methods=['GET'])
 def get_productos_categoria(categoria):
@@ -457,6 +530,98 @@ def extraer_datos_contexto(req):
             datos['cantidades'] = ctx_params.get('number', [])
     
     return datos
+
+def obtener_session_id(req):
+    """
+    Extrae el session ID del request de Dialogflow
+    """
+    session = req.get('session', '')
+    logger.info(f"Session completa recibida: {session}")
+    
+    # Extraer solo el ID de sesión de la URL completa
+    if '/' in session:
+        session_id = session.split('/')[-1]
+    else:
+        session_id = session
+    
+    logger.info(f"Session ID extraído: {session_id}")
+    return session_id
+
+def guardar_productos_sesion(session_id, productos):
+    """
+    Guarda productos en memoria para una sesión específica - VERSION MEJORADA
+    """
+    global sesiones_activas
+    
+    # Crear entrada de sesión si no existe
+    if session_id not in sesiones_activas:
+        sesiones_activas[session_id] = {
+            'productos': [],
+            'timestamp': datetime.now(),
+            'datos_pedido': {}
+        }
+    
+    # Actualizar productos y timestamp
+    sesiones_activas[session_id]['productos'] = productos
+    sesiones_activas[session_id]['timestamp'] = datetime.now()
+    
+    logger.info(f"✅ Productos guardados para sesión {session_id}: {len(productos)} items")
+    for i, producto in enumerate(productos):
+        logger.info(f"  📦 Producto {i+1}: {producto['cantidad']}x {producto['producto']} - S/{producto.get('precio', 0):.2f}")
+
+def obtener_productos_sesion(session_id):
+    """
+    Obtiene productos guardados para una sesión específica - VERSION MEJORADA
+    """
+    global sesiones_activas
+    
+    if session_id not in sesiones_activas:
+        logger.warning(f"⚠️ Sesión {session_id} no encontrada en storage")
+        return []
+    
+    productos = sesiones_activas[session_id]['productos']
+    logger.info(f"📦 Recuperando productos para sesión {session_id}: {len(productos)} items")
+    
+    return productos
+
+def limpiar_productos_sesion(session_id):
+    """
+    Limpia productos de una sesión (después de confirmar pedido) - VERSION MEJORADA
+    """
+    global sesiones_activas
+    if session_id in sesiones_activas:
+        del sesiones_activas[session_id]
+        logger.info(f"🗑️ Sesión {session_id} eliminada del storage")
+
+def limpiar_sesiones_expiradas():
+    """
+    Limpia sesiones que han estado inactivas por más de 2 horas
+    """
+    global sesiones_activas
+    now = datetime.now()
+    sesiones_a_eliminar = []
+    
+    for session_id, data in sesiones_activas.items():
+        tiempo_inactivo = now - data['timestamp']
+        if tiempo_inactivo.total_seconds() > 7200:  # 2 horas
+            sesiones_a_eliminar.append(session_id)
+    
+    for session_id in sesiones_a_eliminar:
+        del sesiones_activas[session_id]
+        logger.info(f"🗑️ Sesión expirada eliminada: {session_id}")
+
+def debug_estado_sesiones():
+    """
+    Función de debug para mostrar el estado actual de todas las sesiones
+    """
+    global sesiones_activas
+    logger.info(f"🔍 Estado actual del storage:")
+    logger.info(f"  📊 Total sesiones activas: {len(sesiones_activas)}")
+    
+    for session_id, data in sesiones_activas.items():
+        productos_count = len(data['productos'])
+        timestamp = data['timestamp'].strftime('%Y-%m-%d %H:%M:%S')
+        logger.info(f"  📋 Sesión {session_id[:8]}... - {productos_count} productos - Última actividad: {timestamp}")
 
 if __name__ == '__main__':
     # Verificar conexión a BD al iniciar
