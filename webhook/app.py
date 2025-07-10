@@ -208,18 +208,9 @@ def handle_confirmar_pedido(parameters, req):
         return jsonify({
             'fulfillmentText': 'Necesito la fecha de entrega para procesar el pedido.'
         })
-    
-    # Validar fecha
-    try:
-        fecha_valida = validar_fecha_entrega(datos_sesion['fecha_entrega'])
-        if not fecha_valida:
-            return jsonify({
-                'fulfillmentText': 'La fecha de entrega debe ser con al menos 1 día de anticipación.'
-            })
-    except:
-        # Si hay error en validación de fecha, usar fecha de mañana por defecto
-        fecha_valida = (datetime.now() + timedelta(days=1)).date()
-        logger.warning(f"Error validando fecha {datos_sesion['fecha_entrega']}, usando fecha por defecto: {fecha_valida}")
+
+    # Usar la fecha tal como la proporcionó el cliente (sin validación)
+    fecha_entrega = datos_sesion['fecha_entrega']
     
     if not datos_sesion['tipo_entrega'] or datos_sesion['tipo_entrega'] not in ['delivery', 'recojo']:
         return jsonify({
