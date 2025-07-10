@@ -1,6 +1,10 @@
 from flask import Flask, request, jsonify, Response
 import requests
 import os
+
+# Crear aplicación Flask (debe estar antes de cualquier @app.route)
+app = Flask(__name__)
+
 # --- INTEGRACIÓN TWILIO <-> DIALOGFLOW ---
 def enviar_a_dialogflow(texto, session_id):
     """
@@ -90,7 +94,8 @@ from datetime import datetime
 # Diccionario mejorado para storage
 sesiones_activas = {}
 
-# Crear aplicación Flask
+
+# Crear aplicación Flask (debe estar antes de cualquier @app.route)
 app = Flask(__name__)
 
 @app.route('/', methods=['GET'])
