@@ -1,42 +1,67 @@
+
+import os
+import tempfile
+import base64
 from flask import Flask, request, jsonify, Response
 import requests
-import os
+
+
+# --- DECODIFICAR CREDENCIALES DE GOOGLE EN BASE64 Y SETEAR VARIABLE ---
+def setup_google_credentials():
+    """
+    Si existe la variable GOOGLE_APPLICATION_CREDENTIALS_BASE64, decodifica y escribe el archivo temporal,
+    y setea GOOGLE_APPLICATION_CREDENTIALS a esa ruta.
+    """
+    b64 = os.getenv('GOOGLE_APPLICATION_CREDENTIALS_BASE64')
+    if b64:
+        try:
+            creds_bytes = base64.b64decode(b64)
+            temp = tempfile.NamedTemporaryFile(delete=False, suffix='.json')
+            temp.write(creds_bytes)
+            temp.close()
+            os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = temp.name
+            print(f"[INFO] GOOGLE_APPLICATION_CREDENTIALS set to {temp.name}")
+        except Exception as e:
+            print(f"[ERROR] No se pudo decodificar credenciales base64: {e}")
+
+# Ejecutar al inicio
+setup_google_credentials()
 
 # Crear aplicación Flask (debe estar antes de cualquier @app.route)
 app = Flask(__name__)
 
-# --- INTEGRACIÓN TWILIO <-> DIALOGFLOW ---
+
+# --- INTEGRACIÓN TWILIO <-> DIALOGFLOW (SDK OFICIAL) ---
 def enviar_a_dialogflow(texto, session_id):
     """
-    Envía el texto del usuario a Dialogflow usando la API REST y retorna la respuesta.
-    Requiere que configures el TOKEN de servicio de Google Cloud en la variable de entorno DIALOGFLOW_TOKEN,
-    y el PROJECT_ID en DIALOGFLOW_PROJECT_ID.
+    Envía el texto del usuario a Dialogflow usando el SDK oficial y retorna la respuesta.
+    Requiere que la variable GOOGLE_APPLICATION_CREDENTIALS esté seteada correctamente.
     """
-    project_id = os.getenv('DIALOGFLOW_PROJECT_ID')
-    token = os.getenv('DIALOGFLOW_TOKEN')
-    if not project_id or not token:
-        return {'fulfillmentText': 'Error: Falta configuración de Dialogflow.'}
-    url = f'https://dialogflow.googleapis.com/v2/projects/{project_id}/agent/sessions/{session_id}:detectIntent'
-    headers = {
-        'Authorization': f'Bearer {token}',
-        'Content-Type': 'application/json'
-    }
-    data = {
-        "queryInput": {
-            "text": {
-                "text": texto,
-                "languageCode": "es"
-            }
-        }
-    }
     try:
-        response = requests.post(url, headers=headers, json=data)
-        if response.status_code == 200:
-            return response.json().get('queryResult', {})
-        else:
-            return {'fulfillmentText': f'Error Dialogflow: {response.text}'}
+        from google.cloud import dialogflow_v2 as dialogflow
+        project_id = os.getenv('DIALOGFLOW_PROJECT_ID')
+        if not project_id:
+            return {'fulfillmentText': 'Error: Falta DIALOGFLOW_PROJECT_ID.'}
+        session_client = dialogflow.SessionsClient()
+        session = session_client.session_path(project_id, session_id)
+        text_input = dialogflow.TextInput(text=texto, language_code="es")
+        query_input = dialogflow.QueryInput(text=text_input)
+        response = session_client.detect_intent(request={"session": session, "query_input": query_input})
+        result = response.query_result
+        return {
+            'fulfillmentText': result.fulfillment_text,
+            'intent': result.intent.display_name if result.intent else None,
+            'parameters': dict(result.parameters) if result.parameters else {},
+            'allRequiredParamsPresent': result.all_required_params_present,
+            'outputContexts': [
+                {
+                    'name': ctx.name,
+                    'parameters': dict(ctx.parameters) if ctx.parameters else {}
+                } for ctx in result.output_contexts
+            ] if result.output_contexts else []
+        }
     except Exception as e:
-        return {'fulfillmentText': f'Error conectando a Dialogflow: {str(e)}'}
+        return {'fulfillmentText': f'Error usando Dialogflow SDK: {str(e)}'}
 
 
 # --- ENDPOINT PARA TWILIO ---
@@ -45,20 +70,30 @@ def twilio_webhook():
     """
     Endpoint para recibir mensajes de Twilio (WhatsApp/SMS) y reenviarlos a Dialogflow.
     """
+    import time
+    start_total = time.time()
+    logger.info("[Twilio] --- INICIO REQUEST ---")
     user_msg = request.form.get('Body')
     user_number = request.form.get('From')
+    logger.info(f"[Twilio] Mensaje recibido: '{user_msg}' de {user_number}")
     if not user_msg or not user_number:
+        logger.warning("[Twilio] Faltan datos Body o From")
         return Response("<Response><Message>Error: Mensaje o número no recibido</Message></Response>", mimetype='application/xml')
 
-    # Llama a Dialogflow API con el mensaje del usuario
-
+    # Medir tiempo de llamada a Dialogflow
+    start_df = time.time()
     dialogflow_response = enviar_a_dialogflow(user_msg, session_id=user_number)
-    # DEBUG: Log para ver la respuesta real de Dialogflow
-    print('DEBUG Twilio -> Dialogflow response:', dialogflow_response)
+    end_df = time.time()
+    logger.info(f"[Twilio] Tiempo llamada a Dialogflow: {end_df - start_df:.3f} segundos")
+    logger.info(f"[Twilio] Respuesta Dialogflow: {dialogflow_response}")
     fulfillment_text = dialogflow_response.get('fulfillmentText', None)
     if not fulfillment_text:
         # Si no hay fulfillmentText, mostrar el error completo para depuración
         fulfillment_text = f"[ERROR Dialogflow] {dialogflow_response}"
+
+    # Medir tiempo antes de responder a Twilio
+    end_total = time.time()
+    logger.info(f"[Twilio] Tiempo total endpoint /twilio: {end_total - start_total:.3f} segundos")
 
     # Responde a Twilio en formato TwiML
     twiml = f"""<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Response>\n    <Message>{fulfillment_text}</Message>\n</Response>"""
