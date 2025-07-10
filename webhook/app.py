@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 import os
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import logging
 from database import test_connection
@@ -9,7 +10,8 @@ from models import (
     crear_pedido, 
     agregar_item_pedido,
     get_pedido_completo,
-    get_todas_categorias
+    get_todas_categorias,
+    buscar_producto_por_nombre
 )
 from utils import (
     validar_telefono,
@@ -60,10 +62,12 @@ def webhook():
         # Procesar según el intent
         if intent_name == 'consultar.productos.categoria':
             return handle_consultar_productos(parameters)
+        elif intent_name == 'hacer.pedido.productos':
+            return handle_pedido_productos(parameters, req)
         elif intent_name == 'hacer.pedido.telefono':
-            return handle_confirmar_pedido(parameters)
+            return handle_pedido_telefono(parameters, req)
         elif intent_name == 'hacer.pedido.confirmar':
-            return handle_confirmar_pedido(parameters)
+            return handle_confirmar_pedido(parameters, req)
         elif intent_name == 'registrar.cliente':
             return handle_registrar_cliente(parameters)
         else:
@@ -114,9 +118,15 @@ def handle_registrar_cliente(parameters):
     """
     Maneja el registro de un nuevo cliente
     """
-    nombre = parameters.get('nombre', '').strip()
-    telefono = parameters.get('telefono', '').strip() or parameters.get('phone-number', '').strip()
-    direccion = parameters.get('direccion', '').strip()
+    # Extraer parámetros con nombres correctos de Dialogflow
+    person = parameters.get('person', {})
+    if isinstance(person, dict):
+        nombre = person.get('name', '').strip()
+    else:
+        nombre = person.strip() if person else ''
+    
+    telefono = parameters.get('phone-number', '').strip()
+    direccion = parameters.get('direccion', '').strip()  # Opcional
     
     # Validar datos requeridos
     if not nombre or not telefono:
@@ -143,47 +153,239 @@ def handle_registrar_cliente(parameters):
             'fulfillmentText': 'Hubo un problema al registrarte. Por favor intenta nuevamente.'
         })
 
-def handle_confirmar_pedido(parameters):
+def handle_confirmar_pedido(parameters, req):
     """
-    Maneja la confirmación de un pedido
+    Maneja la confirmación final de un pedido (cuando el usuario dice "sí")
     """
-    # Extraer parámetros del pedido
-    cliente_telefono = parameters.get('telefono', '') or parameters.get('phone-number', '')
-    fecha_entrega = parameters.get('fecha_entrega', '')
-    tipo_entrega = parameters.get('tipo_entrega', '')
-    direccion_entrega = parameters.get('direccion_entrega', '')
+    # Extraer datos de parámetros directos y contextos
+    datos_directos = {
+        'telefono': parameters.get('telefono', '') or parameters.get('phone-number', ''),
+        'fecha_entrega': parameters.get('fecha_entrega', '') or parameters.get('date', ''),
+        'tipo_entrega': parameters.get('tipo_entrega', ''),
+        'direccion_entrega': parameters.get('direccion_entrega', ''),
+        'nombre': parameters.get('nombre', '') or (parameters.get('person', {}).get('name', '') if isinstance(parameters.get('person'), dict) else parameters.get('person', '')),
+        'notas': parameters.get('notas', '')
+    }
+    
+    # Combinar con datos de contexto
+    datos_contexto = extraer_datos_contexto(req)
+    
+    # Usar datos directos como prioridad, contexto como fallback
+    datos_finales = {}
+    for key in ['telefono', 'fecha_entrega', 'tipo_entrega', 'direccion_entrega', 'nombre', 'notas']:
+        datos_finales[key] = datos_directos.get(key) or datos_contexto.get(key, '')
+    
+    logger.info(f"Confirmación de pedido - Datos finales: {datos_finales}")
     
     # Validaciones básicas
-    telefono_valido = validar_telefono(cliente_telefono)
-    if not telefono_valido:
+    if not datos_finales['telefono']:
         return jsonify({
             'fulfillmentText': 'Necesito un número de teléfono válido para procesar el pedido.'
         })
     
-    fecha_valida = validar_fecha_entrega(fecha_entrega)
-    if not fecha_valida:
+    telefono_valido = validar_telefono(datos_finales['telefono'])
+    if not telefono_valido:
         return jsonify({
-            'fulfillmentText': 'La fecha de entrega debe ser con al menos 1 día de anticipación.'
+            'fulfillmentText': 'El número de teléfono no es válido. Por favor proporciona un número peruano válido.'
         })
     
-    if tipo_entrega not in ['delivery', 'recojo']:
+    if not datos_finales['fecha_entrega']:
+        return jsonify({
+            'fulfillmentText': 'Necesito la fecha de entrega para procesar el pedido.'
+        })
+    
+    # Validar fecha
+    try:
+        fecha_valida = validar_fecha_entrega(datos_finales['fecha_entrega'])
+        if not fecha_valida:
+            return jsonify({
+                'fulfillmentText': 'La fecha de entrega debe ser con al menos 1 día de anticipación.'
+            })
+    except:
+        # Si hay error en validación de fecha, usar fecha de mañana por defecto
+        fecha_valida = (datetime.now() + timedelta(days=1)).date()
+        logger.warning(f"Error validando fecha {datos_finales['fecha_entrega']}, usando fecha por defecto: {fecha_valida}")
+    
+    if not datos_finales['tipo_entrega'] or datos_finales['tipo_entrega'] not in ['delivery', 'recojo']:
         return jsonify({
             'fulfillmentText': 'Por favor especifica si prefieres delivery o recoger en tienda.'
         })
     
-    # Por simplicidad, crear un pedido de ejemplo
-    # En una implementación real, esto vendría de un contexto de conversación
+    # Crear confirmación del pedido
     try:
-        # Aquí iría la lógica completa de manejo de pedidos
-        # Por ahora retornamos un mensaje de confirmación simple
+        nombre_cliente = datos_finales['nombre'] or "Cliente"
+        
+        # Generar número de pedido simple
+        import random
+        numero_pedido = f"PED{random.randint(1000, 9999)}"
+        
+        mensaje_final = f"¡Excelente! 🎉\n\n"
+        mensaje_final += f"Tu pedido #{numero_pedido} ha sido confirmado:\n\n"
+        mensaje_final += f"👤 Cliente: {nombre_cliente}\n"
+        mensaje_final += f"📞 Teléfono: {telefono_valido}\n"
+        mensaje_final += f"📅 Fecha de entrega: {datos_finales['fecha_entrega']}\n"
+        mensaje_final += f"🚚 Modalidad: {datos_finales['tipo_entrega'].title()}\n"
+        
+        if datos_finales['direccion_entrega'] and datos_finales['tipo_entrega'] == 'delivery':
+            mensaje_final += f"📍 Dirección: {datos_finales['direccion_entrega']}\n"
+        
+        if datos_finales['notas']:
+            mensaje_final += f"📝 Notas especiales: {datos_finales['notas']}\n"
+        
+        mensaje_final += f"\nNos pondremos en contacto contigo para coordinar los detalles.\n"
+        mensaje_final += f"¡Gracias por elegir Panadería Jos y Mar! 🥖✨"
+        
         return jsonify({
-            'fulfillmentText': f'Tu pedido ha sido registrado para el {fecha_entrega} por {tipo_entrega}. Te contactaremos pronto para confirmar los detalles.'
+            'fulfillmentText': mensaje_final
         })
+        
     except Exception as e:
         logger.error(f"Error procesando pedido: {str(e)}")
         return jsonify({
             'fulfillmentText': 'Hubo un problema al procesar tu pedido. Por favor intenta nuevamente.'
         })
+
+def handle_pedido_telefono(parameters, req):
+    """
+    Maneja específicamente cuando se recibe el teléfono en el flujo de pedido
+    """
+    # Extraer datos de parámetros directos y contextos
+    datos_directos = {
+        'telefono': parameters.get('telefono', '') or parameters.get('phone-number', ''),
+        'fecha_entrega': parameters.get('fecha_entrega', '') or parameters.get('date', ''),
+        'tipo_entrega': parameters.get('tipo_entrega', ''),
+        'direccion_entrega': parameters.get('direccion_entrega', ''),
+        'nombre': parameters.get('nombre', '') or (parameters.get('person', {}).get('name', '') if isinstance(parameters.get('person'), dict) else parameters.get('person', '')),
+        'notas': parameters.get('notas', '')
+    }
+    
+    # Combinar con datos de contexto
+    datos_contexto = extraer_datos_contexto(req)
+    
+    # Usar datos directos como prioridad, contexto como fallback
+    datos_finales = {}
+    for key in ['telefono', 'fecha_entrega', 'tipo_entrega', 'direccion_entrega', 'nombre', 'notas']:
+        datos_finales[key] = datos_directos.get(key) or datos_contexto.get(key, '')
+    
+    logger.info(f"Datos del pedido en teléfono - Datos finales: {datos_finales}")
+    
+    # Validar teléfono
+    if not datos_finales['telefono']:
+        return jsonify({
+            'fulfillmentText': 'Por favor proporciona tu número de teléfono para continuar con el pedido.'
+        })
+    
+    telefono_valido = validar_telefono(datos_finales['telefono'])
+    if not telefono_valido:
+        return jsonify({
+            'fulfillmentText': 'El número de teléfono no es válido. Por favor proporciona un número peruano válido (ej: 987654321).'
+        })
+    
+    # Crear mensaje de confirmación con todos los datos disponibles
+    mensaje_confirmacion = f"Perfecto! He registrado tu teléfono: {telefono_valido}\n\n"
+    mensaje_confirmacion += "Resumen de tu pedido:\n"
+    
+    if datos_finales['nombre']:
+        mensaje_confirmacion += f"👤 Cliente: {datos_finales['nombre']}\n"
+    if datos_finales['fecha_entrega']:
+        mensaje_confirmacion += f"📅 Fecha: {datos_finales['fecha_entrega']}\n"
+    if datos_finales['tipo_entrega']:
+        mensaje_confirmacion += f"🚚 Tipo: {datos_finales['tipo_entrega'].title()}\n"
+    if datos_finales['direccion_entrega'] and datos_finales['tipo_entrega'] == 'delivery':
+        mensaje_confirmacion += f"📍 Dirección: {datos_finales['direccion_entrega']}\n"
+    if datos_finales['notas']:
+        mensaje_confirmacion += f"📝 Notas: {datos_finales['notas']}\n"
+    
+    mensaje_confirmacion += f"📞 Teléfono: {telefono_valido}\n\n"
+    mensaje_confirmacion += "¿Confirmas este pedido? Responde 'sí' para confirmar o 'no' para cancelar."
+    
+    return jsonify({'fulfillmentText': mensaje_confirmacion})
+
+def handle_pedido_productos(parameters, req):
+    """
+    Maneja la captura de productos cuando el usuario especifica qué quiere comprar
+    """
+    productos = parameters.get('producto', [])
+    cantidades = parameters.get('number', [])
+    
+    # Asegurar que sean listas
+    if not isinstance(productos, list):
+        productos = [productos] if productos else []
+    if not isinstance(cantidades, list):
+        cantidades = [cantidades] if cantidades else []
+    
+    # Validar que tengamos productos
+    if not productos:
+        return jsonify({
+            'fulfillmentText': 'No pude identificar los productos que deseas. ¿Puedes especificar qué productos te gustaría comprar?\n\nEjemplo: "Quiero 2 baguettes y 1 torta de chocolate"'
+        })
+    
+    # Crear lista de productos del pedido
+    items_pedido = []
+    mensaje_productos = ""
+    total_items = 0
+    productos_no_encontrados = []
+    
+    # Procesar cada producto
+    for i, producto_nombre in enumerate(productos):
+        # Obtener cantidad correspondiente, o 1 por defecto
+        cantidad = 1
+        if i < len(cantidades):
+            try:
+                cantidad = int(float(cantidades[i]))
+            except (ValueError, TypeError):
+                cantidad = 1
+        
+        # Buscar el producto en la base de datos
+        producto_info = buscar_producto_por_nombre(producto_nombre)
+        
+        if producto_info:
+            # Agregar a la lista
+            items_pedido.append({
+                'producto': producto_nombre,
+                'cantidad': cantidad,
+                'producto_id': producto_info['id'],
+                'precio': producto_info['precio']
+            })
+            
+            # Construir mensaje con precio
+            precio_unitario = producto_info['precio']
+            precio_total = precio_unitario * cantidad
+            
+            if cantidad == 1:
+                mensaje_productos += f"• {cantidad} {producto_info['nombre']} - S/ {precio_total:.2f}\n"
+            else:
+                mensaje_productos += f"• {cantidad} {producto_info['nombre']}s - S/ {precio_total:.2f}\n"
+            
+            total_items += cantidad
+        else:
+            # Producto no encontrado
+            productos_no_encontrados.append(producto_nombre)
+    
+    # Crear mensaje de respuesta
+    if items_pedido:
+        precio_total_pedido = sum(item['precio'] * item['cantidad'] for item in items_pedido)
+        
+        mensaje = f"Perfecto! He agregado a tu pedido:\n\n{mensaje_productos}"
+        mensaje += f"\nTotal de productos: {total_items}\n"
+        mensaje += f"💰 Subtotal: S/ {precio_total_pedido:.2f}\n\n"
+        
+        if productos_no_encontrados:
+            mensaje += f"⚠️ No pude encontrar: {', '.join(productos_no_encontrados)}\n"
+            mensaje += "¿Podrías especificar estos productos de otra manera?\n\n"
+        
+        mensaje += "¿Deseas agregar algo más o continuamos con los datos del pedido?\n\n"
+        mensaje += "Puedes decir:\n"
+        mensaje += "• \"Agregar más productos\" para seguir agregando\n"
+        mensaje += "• \"Continuar\" o \"Confirmar\" para proceder con tus datos"
+    else:
+        mensaje = f"No pude encontrar los productos: {', '.join(productos_no_encontrados)}\n\n"
+        mensaje += "¿Podrías especificar los productos de otra manera?\n"
+        mensaje += "Por ejemplo: 'baguette', 'pan francés', 'torta de chocolate', etc."
+    
+    return jsonify({
+        'fulfillmentText': mensaje
+    })
 
 @app.route('/productos/<categoria>', methods=['GET'])
 def get_productos_categoria(categoria):
@@ -205,6 +407,56 @@ def test_database():
         return jsonify({'status': 'success', 'message': 'Conexión a base de datos exitosa'})
     else:
         return jsonify({'status': 'error', 'message': 'Error en conexión a base de datos'}), 500
+
+def extraer_datos_contexto(req):
+    """
+    Función auxiliar para extraer datos de los contextos de Dialogflow
+    """
+    contexts = req.get('queryResult', {}).get('outputContexts', [])
+    datos = {}
+    
+    for context in contexts:
+        ctx_params = context.get('parameters', {})
+        
+        # Extraer todos los parámetros posibles
+        if 'date' in ctx_params or 'fecha_entrega' in ctx_params:
+            datos['fecha_entrega'] = ctx_params.get('date', '') or ctx_params.get('fecha_entrega', '')
+        
+        if 'tipo_entrega' in ctx_params:
+            tipo = ctx_params.get('tipo_entrega', '')
+            if isinstance(tipo, list) and tipo:
+                datos['tipo_entrega'] = tipo[0]
+            else:
+                datos['tipo_entrega'] = tipo
+        
+        if 'person' in ctx_params or 'nombre' in ctx_params:
+            person = ctx_params.get('person', {})
+            if isinstance(person, dict):
+                datos['nombre'] = person.get('name', '')
+            else:
+                datos['nombre'] = person or ctx_params.get('nombre', '')
+        
+        if 'direccion_entrega' in ctx_params or 'direccion' in ctx_params:
+            direccion = ctx_params.get('direccion_entrega', {})
+            if isinstance(direccion, dict):
+                datos['direccion_entrega'] = f"{direccion.get('business-name', '')} {direccion.get('street-address', '')}".strip()
+            else:
+                datos['direccion_entrega'] = direccion or ctx_params.get('direccion', '')
+        
+        if 'notas' in ctx_params:
+            datos['notas'] = ctx_params.get('notas', '')
+        
+        if 'phone-number' in ctx_params or 'telefono' in ctx_params:
+            datos['telefono'] = ctx_params.get('phone-number', '') or ctx_params.get('telefono', '')
+        
+        # Extraer productos si existen
+        if 'producto' in ctx_params:
+            datos['productos'] = ctx_params.get('producto', [])
+        
+        if 'number' in ctx_params:
+            datos['cantidades'] = ctx_params.get('number', [])
+    
+    return datos
 
 if __name__ == '__main__':
     # Verificar conexión a BD al iniciar

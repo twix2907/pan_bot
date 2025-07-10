@@ -110,3 +110,46 @@ def get_todas_categorias():
     ORDER BY categoria
     """
     return execute_query(query)
+
+def buscar_producto_por_nombre(nombre_producto):
+    """
+    Busca un producto por nombre (búsqueda flexible)
+    """
+    # Primero búsqueda exacta
+    query_exacta = """
+    SELECT id, nombre, categoria, precio, descripcion, disponible 
+    FROM productos 
+    WHERE LOWER(nombre) = LOWER(%s) AND disponible = TRUE
+    """
+    resultado = execute_query(query_exacta, (nombre_producto,))
+    
+    if resultado:
+        return resultado[0]
+    
+    # Si no encuentra exacto, búsqueda parcial
+    query_parcial = """
+    SELECT id, nombre, categoria, precio, descripcion, disponible 
+    FROM productos 
+    WHERE LOWER(nombre) LIKE LOWER(%s) AND disponible = TRUE
+    ORDER BY LENGTH(nombre)
+    LIMIT 1
+    """
+    resultado = execute_query(query_parcial, (f'%{nombre_producto}%',))
+    
+    return resultado[0] if resultado else None
+
+def get_productos_mas_vendidos(limite=5):
+    """
+    Obtiene los productos más vendidos
+    """
+    query = """
+    SELECT p.id, p.nombre, p.categoria, p.precio, p.descripcion, 
+           COUNT(pi.id) as veces_pedido
+    FROM productos p
+    LEFT JOIN pedido_items pi ON p.id = pi.producto_id
+    WHERE p.disponible = TRUE
+    GROUP BY p.id, p.nombre, p.categoria, p.precio, p.descripcion
+    ORDER BY veces_pedido DESC, p.nombre
+    LIMIT %s
+    """
+    return execute_query(query, (limite,))

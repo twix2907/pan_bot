@@ -51,3 +51,9 @@ Thumbs.db
 
 # Railway
 .railway/
+
+# Dialogflow export (no necesario en repo)
+josy_bot (1)/
+
+# Archivos de configuración local
+chat.json

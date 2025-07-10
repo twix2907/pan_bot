@@ -1,4 +1,8 @@
+
+
 # GitHub Copilot - Instrucciones para Desarrollo del Chatbot Panadería Jos y Mar
+
+no tomes todo lo que yo digo como correcto porfavor , necesito que tu tambien me digas si estoy mal y porque , no tomes todo lo que yo digo como correcto porfavor te pido eso
 
 ## 📋 INFORMACIÓN DEL PROYECTO
 
