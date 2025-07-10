@@ -51,8 +51,14 @@ def twilio_webhook():
         return Response("<Response><Message>Error: Mensaje o número no recibido</Message></Response>", mimetype='application/xml')
 
     # Llama a Dialogflow API con el mensaje del usuario
+
     dialogflow_response = enviar_a_dialogflow(user_msg, session_id=user_number)
-    fulfillment_text = dialogflow_response.get('fulfillmentText', 'Lo siento, no entendí.')
+    # DEBUG: Log para ver la respuesta real de Dialogflow
+    print('DEBUG Twilio -> Dialogflow response:', dialogflow_response)
+    fulfillment_text = dialogflow_response.get('fulfillmentText', None)
+    if not fulfillment_text:
+        # Si no hay fulfillmentText, mostrar el error completo para depuración
+        fulfillment_text = f"[ERROR Dialogflow] {dialogflow_response}"
 
     # Responde a Twilio en formato TwiML
     twiml = f"""<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Response>\n    <Message>{fulfillment_text}</Message>\n</Response>"""
@@ -79,8 +85,13 @@ from utils import (
     generar_mensaje_pedido_confirmacion
 )
 
-# Cargar variables de entorno desde el directorio del webhook
-load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
+
+# Cargar variables de entorno desde la raíz del proyecto (un nivel arriba de webhook)
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
+
+# DEBUG: Mostrar valores de las variables de entorno críticas
+print('DEBUG DIALOGFLOW_PROJECT_ID:', os.getenv('DIALOGFLOW_PROJECT_ID'))
+print('DEBUG DIALOGFLOW_TOKEN:', os.getenv('DIALOGFLOW_TOKEN'))
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -112,22 +123,22 @@ def webhook():
     """
     Webhook principal para Dialogflow
     """
+    # OPTIMIZACIÓN: Responder lo más rápido posible, manejo de errores fuera del try principal
+    from threading import Thread
+    import traceback
     try:
-        # Limpiar sesiones expiradas cada cierto tiempo
-        limpiar_sesiones_expiradas()
-        
-        # Obtener datos del request de Dialogflow
+        # Limpiar sesiones expiradas en background
+        Thread(target=limpiar_sesiones_expiradas).start()
+
         req = request.get_json()
-        
-        # Extraer información básica
         intent_name = req.get('queryResult', {}).get('intent', {}).get('displayName', '')
         parameters = req.get('queryResult', {}).get('parameters', {})
         query_text = req.get('queryResult', {}).get('queryText', '')
-        
+
         logger.info(f"Intent recibido: {intent_name}")
         logger.info(f"Parámetros: {parameters}")
-        
-        # Procesar según el intent
+
+        # Procesamiento rápido: solo lógica, sin esperas ni operaciones pesadas
         if intent_name == 'consultar.productos.categoria':
             return handle_consultar_productos(parameters)
         elif intent_name == 'hacer.pedido.productos':
@@ -147,16 +158,24 @@ def webhook():
         elif intent_name == 'hacer.pedido.telefono':
             return handle_pedido_telefono(parameters, req)
         elif intent_name == 'hacer.pedido.confirmar':
-            return handle_confirmar_pedido(parameters, req)
+            # Confirmar pedido puede ser lento por la BD, responde rápido y procesa en background
+            def confirmar_async():
+                try:
+                    handle_confirmar_pedido(parameters, req)
+                except Exception as e:
+                    logger.error(f"Error async confirmar: {str(e)}")
+                    logger.error(traceback.format_exc())
+            Thread(target=confirmar_async).start()
+            return jsonify({'fulfillmentText': '¡Estamos confirmando tu pedido! Te avisaremos en breve.'})
         elif intent_name == 'registrar.cliente':
             return handle_registrar_cliente(parameters)
         else:
             return jsonify({
                 'fulfillmentText': 'Lo siento, no pude procesar tu solicitud. ¿Puedes intentar de nuevo?'
             })
-            
     except Exception as e:
         logger.error(f"Error en webhook: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
             'fulfillmentText': 'Ocurrió un error técnico. Por favor intenta nuevamente en unos momentos.'
         })
