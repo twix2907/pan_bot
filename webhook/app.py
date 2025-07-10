@@ -542,25 +542,18 @@ def handle_pedido_fecha(parameters, req):
     """
     session_id = obtener_session_id(req)
     
-    fecha = parameters.get('date', '').strip()
+    # Extraer fecha de diferentes fuentes posibles
+    fecha = (parameters.get('date', '') or 
+             parameters.get('fecha', '') or 
+             parameters.get('fecha_entrega', '') or
+             req.get('queryResult', {}).get('queryText', '')).strip()
     
     if not fecha:
         return jsonify({
             'fulfillmentText': 'No pude capturar la fecha. ¿Podrías especificar para qué fecha necesitas el pedido?'
         })
     
-    # Validar fecha
-    try:
-        fecha_valida = validar_fecha_entrega(fecha)
-        if not fecha_valida:
-            return jsonify({
-                'fulfillmentText': 'La fecha debe ser con al menos 1 día de anticipación. ¿Podrías proporcionar otra fecha?'
-            })
-    except:
-        # Si hay error, aceptar la fecha tal como viene
-        logger.warning(f"No se pudo validar fecha: {fecha}")
-    
-    # Guardar en sesión
+    # Guardar la fecha tal como la proporciona el cliente (sin validaciones)
     actualizar_datos_sesion(session_id, fecha_entrega=fecha, paso_actual='fecha')
     
     return jsonify({
