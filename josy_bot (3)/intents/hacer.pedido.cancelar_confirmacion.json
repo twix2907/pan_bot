@@ -1,0 +1,42 @@
+{
+  "id": "390ce2cc-daee-430b-a7aa-e6bd61228a33",
+  "name": "hacer.pedido.cancelar_confirmacion",
+  "auto": true,
+  "contexts": [
+    "esperando_confirmacion_pedido"
+  ],
+  "responses": [
+    {
+      "resetContexts": false,
+      "action": "hacer.pedido.cancelar_confirmacion",
+      "affectedContexts": [
+        {
+          "name": "esperando_opcion_modificacion",
+          "lifespan": 2
+        }
+      ],
+      "parameters": [],
+      "messages": [
+        {
+          "type": "0",
+          "title": "",
+          "textToSpeech": "",
+          "lang": "es",
+          "speech": [
+            "Entendido. ¿Qué te gustaría hacer?\n\n• Escribe \"modificar datos\" para cambiar nombre, fecha, dirección, etc.\n• Escribe \"cambiar productos\" para modificar los productos del pedido\n• Escribe \"cancelar todo\" para cancelar completamente el pedido"
+          ],
+          "condition": ""
+        }
+      ],
+      "speech": []
+    }
+  ],
+  "priority": 500000,
+  "webhookUsed": false,
+  "webhookForSlotFilling": false,
+  "fallbackIntent": false,
+  "events": [],
+  "conditionalResponses": [],
+  "condition": "",
+  "conditionalFollowupEvents": []
+}

@@ -1,0 +1,57 @@
+{
+  "id": "51cd62e6-295c-414b-bed9-fb5864b732c4",
+  "name": "hacer.pedido.nombre",
+  "auto": true,
+  "contexts": [
+    "esperando_nombre"
+  ],
+  "responses": [
+    {
+      "resetContexts": false,
+      "action": "hacer.pedido.nombre",
+      "affectedContexts": [
+        {
+          "name": "esperando_fecha",
+          "lifespan": 5
+        }
+      ],
+      "parameters": [
+        {
+          "id": "90bbcdce-8951-41e5-87d4-78598c2587b7",
+          "name": "person",
+          "required": true,
+          "dataType": "@sys.person",
+          "value": "$person",
+          "defaultValue": "",
+          "isList": false,
+          "prompts": [],
+          "promptMessages": [],
+          "noMatchPromptMessages": [],
+          "noInputPromptMessages": [],
+          "outputDialogContexts": []
+        }
+      ],
+      "messages": [
+        {
+          "type": "0",
+          "title": "",
+          "textToSpeech": "",
+          "lang": "es",
+          "speech": [
+            "¿Para qué fecha necesitas el pedido? (mínimo 1 día de anticipación)"
+          ],
+          "condition": ""
+        }
+      ],
+      "speech": []
+    }
+  ],
+  "priority": 500000,
+  "webhookUsed": false,
+  "webhookForSlotFilling": false,
+  "fallbackIntent": false,
+  "events": [],
+  "conditionalResponses": [],
+  "condition": "",
+  "conditionalFollowupEvents": []
+}

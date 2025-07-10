@@ -1,0 +1,61 @@
+{
+  "id": "445e9e63-2455-4ff4-8d74-4f05c66dd180",
+  "name": "hacer.pedido.nota",
+  "auto": true,
+  "contexts": [
+    "esperando_nota"
+  ],
+  "responses": [
+    {
+      "resetContexts": false,
+      "action": "hacer.pedido.nota",
+      "affectedContexts": [
+        {
+          "name": "esperando_telefono",
+          "lifespan": 5
+        },
+        {
+          "name": "esperando_nota",
+          "lifespan": 0
+        }
+      ],
+      "parameters": [
+        {
+          "id": "d2b5e40b-2ac4-4b74-985d-d5bc6632de48",
+          "name": "notas",
+          "required": false,
+          "dataType": "@sys.any",
+          "value": "$notas",
+          "defaultValue": "",
+          "isList": false,
+          "prompts": [],
+          "promptMessages": [],
+          "noMatchPromptMessages": [],
+          "noInputPromptMessages": [],
+          "outputDialogContexts": []
+        }
+      ],
+      "messages": [
+        {
+          "type": "0",
+          "title": "",
+          "textToSpeech": "",
+          "lang": "es",
+          "speech": [
+            "Por favor confirma tu número de teléfono para registrar el pedido."
+          ],
+          "condition": ""
+        }
+      ],
+      "speech": []
+    }
+  ],
+  "priority": 500000,
+  "webhookUsed": false,
+  "webhookForSlotFilling": false,
+  "fallbackIntent": false,
+  "events": [],
+  "conditionalResponses": [],
+  "condition": "",
+  "conditionalFollowupEvents": []
+}

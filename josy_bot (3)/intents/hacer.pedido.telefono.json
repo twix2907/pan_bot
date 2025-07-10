@@ -1,0 +1,54 @@
+{
+  "id": "4e559321-2805-4514-8947-0de38e84e4ad",
+  "name": "hacer.pedido.telefono",
+  "auto": true,
+  "contexts": [
+    "esperando_telefono"
+  ],
+  "responses": [
+    {
+      "resetContexts": false,
+      "action": "hacer.pedido.telefono",
+      "affectedContexts": [
+        {
+          "name": "esperando_confirmacion_pedido",
+          "lifespan": 1
+        }
+      ],
+      "parameters": [
+        {
+          "id": "16363bdf-ad0a-4500-b79a-0f9e88c57014",
+          "name": "phone-number",
+          "required": true,
+          "dataType": "@sys.phone-number",
+          "value": "$phone-number",
+          "defaultValue": "",
+          "isList": false,
+          "prompts": [],
+          "promptMessages": [],
+          "noMatchPromptMessages": [],
+          "noInputPromptMessages": [],
+          "outputDialogContexts": []
+        }
+      ],
+      "messages": [
+        {
+          "type": "0",
+          "title": "",
+          "textToSpeech": "",
+          "lang": "es",
+          "condition": ""
+        }
+      ],
+      "speech": []
+    }
+  ],
+  "priority": 500000,
+  "webhookUsed": true,
+  "webhookForSlotFilling": false,
+  "fallbackIntent": false,
+  "events": [],
+  "conditionalResponses": [],
+  "condition": "",
+  "conditionalFollowupEvents": []
+}

@@ -1,0 +1,54 @@
+[
+  {
+    "value": "pan_salado",
+    "synonyms": [
+      "pan_salado",
+      "pan frances",
+      "ciabatti",
+      "baguette"
+    ]
+  },
+  {
+    "value": "pan dulce",
+    "synonyms": [
+      "pan dulce",
+      "bizcocho",
+      "chancay",
+      "wawas",
+      "caramanduca",
+      "panetones"
+    ]
+  },
+  {
+    "value": "pan_semidulce",
+    "synonyms": [
+      "pan_semidulce",
+      "yema",
+      "caracol",
+      "integral",
+      "camote",
+      "petipanes"
+    ]
+  },
+  {
+    "value": "pasteles",
+    "synonyms": [
+      "pasteles",
+      "torta",
+      "tortas",
+      "tres leches",
+      "marmoleado",
+      "torta helada"
+    ]
+  },
+  {
+    "value": "bocaditos",
+    "synonyms": [
+      "bocaditos",
+      "empanaditas",
+      "enrolladitos",
+      "alfajor",
+      "pionono"
+    ]
+  }
+]

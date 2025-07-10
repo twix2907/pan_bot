@@ -1,0 +1,62 @@
+[
+  {
+    "id": "cd24b3c6-06a7-4b0f-ba52-5d5578b68ee1",
+    "data": [
+      {
+        "text": "Jr. Lima 789",
+        "meta": "@sys.location",
+        "alias": "direccion_entrega",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "es",
+    "updated": 0
+  },
+  {
+    "id": "d6409539-e9c6-416a-af71-308f933bf804",
+    "data": [
+      {
+        "text": "habitat mz k lote 9",
+        "meta": "@sys.location",
+        "alias": "direccion_entrega",
+        "userDefined": true
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "es",
+    "updated": 0
+  },
+  {
+    "id": "6f9d7689-4140-48a4-bc26-88d9e84ce803",
+    "data": [
+      {
+        "text": "Calle Falsa 456",
+        "meta": "@sys.location",
+        "alias": "direccion_entrega",
+        "userDefined": true
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "es",
+    "updated": 0
+  },
+  {
+    "id": "5fd70019-cf92-4753-9708-97f3f618d5e3",
+    "data": [
+      {
+        "text": "Av. Ejemplo 123",
+        "meta": "@sys.location",
+        "alias": "direccion_entrega",
+        "userDefined": true
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "es",
+    "updated": 0
+  }
+]

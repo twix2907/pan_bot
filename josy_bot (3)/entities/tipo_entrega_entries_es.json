@@ -1,0 +1,20 @@
+[
+  {
+    "value": "delivery",
+    "synonyms": [
+      "delivery",
+      "enviar",
+      "a domicilio",
+      "a mi casa"
+    ]
+  },
+  {
+    "value": "recojo",
+    "synonyms": [
+      "recojo",
+      "recoger",
+      "en tienda",
+      "pasar a recoger"
+    ]
+  }
+]

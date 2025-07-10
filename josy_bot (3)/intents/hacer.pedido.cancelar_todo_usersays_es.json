@@ -1,0 +1,54 @@
+[
+  {
+    "id": "33231360-a116-429d-bf54-e50243f0d5ba",
+    "data": [
+      {
+        "text": "Salir",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "es",
+    "updated": 0
+  },
+  {
+    "id": "330d5602-df36-4a6d-97df-2851f77e655d",
+    "data": [
+      {
+        "text": "No quiero hacer pedido",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "es",
+    "updated": 0
+  },
+  {
+    "id": "fec15665-0eed-4083-9e4c-13e94f30cf8c",
+    "data": [
+      {
+        "text": "Cancelar todo",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "es",
+    "updated": 0
+  },
+  {
+    "id": "8587ee67-b3c5-47da-ad6f-7cacc1bfd24f",
+    "data": [
+      {
+        "text": "Cancelar pedido",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "es",
+    "updated": 0
+  }
+]

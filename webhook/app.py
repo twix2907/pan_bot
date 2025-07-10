@@ -75,6 +75,18 @@ def webhook():
             return handle_consultar_productos(parameters)
         elif intent_name == 'hacer.pedido.productos':
             return handle_pedido_productos(parameters, req)
+        elif intent_name == 'hacer.pedido.nombre':
+            return handle_pedido_nombre(parameters, req)
+        elif intent_name == 'hacer.pedido.fecha':
+            return handle_pedido_fecha(parameters, req)
+        elif intent_name == 'hacer.pedido.delivery':
+            return handle_pedido_delivery(parameters, req)
+        elif intent_name == 'hacer.pedido.recojo':
+            return handle_pedido_recojo(parameters, req)
+        elif intent_name == 'hacer.pedido.direccion':
+            return handle_pedido_direccion(parameters, req)
+        elif intent_name == 'hacer.pedido.nota':
+            return handle_pedido_nota(parameters, req)
         elif intent_name == 'hacer.pedido.telefono':
             return handle_pedido_telefono(parameters, req)
         elif intent_name == 'hacer.pedido.confirmar':
@@ -166,48 +178,40 @@ def handle_registrar_cliente(parameters):
 
 def handle_confirmar_pedido(parameters, req):
     """
-    Maneja la confirmación final de un pedido (cuando el usuario dice "sí")
+    Maneja la confirmación final de un pedido (cuando el usuario dice "sí") - VERSION NUEVA CON STORAGE SESIÓN
     """
-    # Extraer datos de parámetros directos y contextos
-    datos_directos = {
-        'telefono': parameters.get('telefono', '') or parameters.get('phone-number', ''),
-        'fecha_entrega': parameters.get('fecha_entrega', '') or parameters.get('date', ''),
-        'tipo_entrega': parameters.get('tipo_entrega', ''),
-        'direccion_entrega': parameters.get('direccion_entrega', ''),
-        'nombre': parameters.get('nombre', '') or (parameters.get('person', {}).get('name', '') if isinstance(parameters.get('person'), dict) else parameters.get('person', '')),
-        'notas': parameters.get('notas', '')
-    }
+    session_id = obtener_session_id(req)
     
-    # Combinar con datos de contexto
-    datos_contexto = extraer_datos_contexto(req)
+    # Obtener todos los datos de la sesión
+    datos_sesion = obtener_datos_sesion(session_id)
     
-    # Usar datos directos como prioridad, contexto como fallback
-    datos_finales = {}
-    for key in ['telefono', 'fecha_entrega', 'tipo_entrega', 'direccion_entrega', 'nombre', 'notas']:
-        datos_finales[key] = datos_directos.get(key) or datos_contexto.get(key, '')
-    
-    logger.info(f"Confirmación de pedido - Datos finales: {datos_finales}")
+    logger.info(f"Confirmación de pedido - Datos de sesión: {datos_sesion}")
     
     # Validaciones básicas
-    if not datos_finales['telefono']:
+    if not datos_sesion['productos']:
+        return jsonify({
+            'fulfillmentText': 'No hay productos en tu pedido. Por favor agrega algunos productos antes de confirmar.'
+        })
+    
+    if not datos_sesion['telefono']:
         return jsonify({
             'fulfillmentText': 'Necesito un número de teléfono válido para procesar el pedido.'
         })
     
-    telefono_valido = validar_telefono(datos_finales['telefono'])
+    telefono_valido = validar_telefono(datos_sesion['telefono'])
     if not telefono_valido:
         return jsonify({
             'fulfillmentText': 'El número de teléfono no es válido. Por favor proporciona un número peruano válido.'
         })
     
-    if not datos_finales['fecha_entrega']:
+    if not datos_sesion['fecha_entrega']:
         return jsonify({
             'fulfillmentText': 'Necesito la fecha de entrega para procesar el pedido.'
         })
     
     # Validar fecha
     try:
-        fecha_valida = validar_fecha_entrega(datos_finales['fecha_entrega'])
+        fecha_valida = validar_fecha_entrega(datos_sesion['fecha_entrega'])
         if not fecha_valida:
             return jsonify({
                 'fulfillmentText': 'La fecha de entrega debe ser con al menos 1 día de anticipación.'
@@ -215,39 +219,56 @@ def handle_confirmar_pedido(parameters, req):
     except:
         # Si hay error en validación de fecha, usar fecha de mañana por defecto
         fecha_valida = (datetime.now() + timedelta(days=1)).date()
-        logger.warning(f"Error validando fecha {datos_finales['fecha_entrega']}, usando fecha por defecto: {fecha_valida}")
+        logger.warning(f"Error validando fecha {datos_sesion['fecha_entrega']}, usando fecha por defecto: {fecha_valida}")
     
-    if not datos_finales['tipo_entrega'] or datos_finales['tipo_entrega'] not in ['delivery', 'recojo']:
+    if not datos_sesion['tipo_entrega'] or datos_sesion['tipo_entrega'] not in ['delivery', 'recojo']:
         return jsonify({
             'fulfillmentText': 'Por favor especifica si prefieres delivery o recoger en tienda.'
         })
     
     # Crear confirmación del pedido
     try:
-        nombre_cliente = datos_finales['nombre'] or "Cliente"
+        nombre_cliente = datos_sesion['nombre'] or "Cliente"
+        
+        # Aquí podrías guardar en la base de datos si lo deseas
+        # cliente_id = crear_cliente(nombre_cliente, telefono_valido, datos_sesion['direccion_entrega'])
+        # pedido_id = crear_pedido(cliente_id, fecha_valida, datos_sesion['tipo_entrega'], datos_sesion['notas'])
+        # for item in datos_sesion['productos']:
+        #     agregar_item_pedido(pedido_id, item['producto_id'], item['cantidad'])
         
         # Generar número de pedido simple
         import random
         numero_pedido = f"PED{random.randint(1000, 9999)}"
         
+        # Calcular total
+        total_pedido = sum(item['precio'] * item['cantidad'] for item in datos_sesion['productos'])
+        
         mensaje_final = f"¡Excelente! 🎉\n\n"
         mensaje_final += f"Tu pedido #{numero_pedido} ha sido confirmado:\n\n"
         mensaje_final += f"👤 Cliente: {nombre_cliente}\n"
         mensaje_final += f"📞 Teléfono: {telefono_valido}\n"
-        mensaje_final += f"📅 Fecha de entrega: {datos_finales['fecha_entrega']}\n"
-        mensaje_final += f"🚚 Modalidad: {datos_finales['tipo_entrega'].title()}\n"
+        mensaje_final += f"📅 Fecha de entrega: {datos_sesion['fecha_entrega']}\n"
+        mensaje_final += f"🚚 Modalidad: {datos_sesion['tipo_entrega'].title()}\n"
         
-        if datos_finales['direccion_entrega'] and datos_finales['tipo_entrega'] == 'delivery':
-            mensaje_final += f"📍 Dirección: {datos_finales['direccion_entrega']}\n"
+        if datos_sesion['direccion_entrega'] and datos_sesion['tipo_entrega'] == 'delivery':
+            mensaje_final += f"📍 Dirección: {datos_sesion['direccion_entrega']}\n"
         
-        if datos_finales['notas']:
-            mensaje_final += f"📝 Notas especiales: {datos_finales['notas']}\n"
+        if datos_sesion['notas'] and datos_sesion['notas'] != 'Ninguna':
+            mensaje_final += f"📝 Notas especiales: {datos_sesion['notas']}\n"
         
-        mensaje_final += f"\nNos pondremos en contacto contigo para coordinar los detalles.\n"
+        # Mostrar productos
+        mensaje_final += f"\n🛒 Productos:\n"
+        for item in datos_sesion['productos']:
+            cantidad = item['cantidad']
+            producto = item['producto']
+            precio_total = item['precio'] * cantidad
+            mensaje_final += f"• {cantidad}x {producto} - S/ {precio_total:.2f}\n"
+        
+        mensaje_final += f"\n💰 Total: S/ {total_pedido:.2f}\n\n"
+        mensaje_final += f"Nos pondremos en contacto contigo para coordinar los detalles.\n"
         mensaje_final += f"¡Gracias por elegir Panadería Jos y Mar! 🥖✨"
         
-        # Limpiar productos de sesión después de confirmar pedido
-        session_id = obtener_session_id(req)
+        # Limpiar sesión después de confirmar pedido
         limpiar_productos_sesion(session_id)
         
         return jsonify({
@@ -262,91 +283,38 @@ def handle_confirmar_pedido(parameters, req):
 
 def handle_pedido_telefono(parameters, req):
     """
-    Maneja específicamente cuando se recibe el teléfono en el flujo de pedido
+    Maneja específicamente cuando se recibe el teléfono en el flujo de pedido - VERSION NUEVA
     """
-    # Obtener session ID
     session_id = obtener_session_id(req)
-    logger.info(f"Procesando teléfono para session_id: {session_id}")
     
-    # Debug: mostrar el estado actual de sesiones
-    debug_estado_sesiones()
+    # Extraer teléfono
+    telefono = parameters.get('phone-number', '').strip()
     
-    # Extraer datos de parámetros directos y contextos
-    datos_directos = {
-        'telefono': parameters.get('telefono', '') or parameters.get('phone-number', ''),
-        'fecha_entrega': parameters.get('fecha_entrega', '') or parameters.get('date', ''),
-        'tipo_entrega': parameters.get('tipo_entrega', ''),
-        'direccion_entrega': parameters.get('direccion_entrega', ''),
-        'nombre': parameters.get('nombre', '') or (parameters.get('person', {}).get('name', '') if isinstance(parameters.get('person'), dict) else parameters.get('person', '')),
-        'notas': parameters.get('notas', '')
-    }
-    
-    # Combinar con datos de contexto
-    datos_contexto = extraer_datos_contexto(req)
-    
-    # Usar datos directos como prioridad, contexto como fallback
-    datos_finales = {}
-    for key in ['telefono', 'fecha_entrega', 'tipo_entrega', 'direccion_entrega', 'nombre', 'notas']:
-        datos_finales[key] = datos_directos.get(key) or datos_contexto.get(key, '')
-    
-    # Obtener productos de la sesión
-    productos_sesion = obtener_productos_sesion(session_id)
-    
-    logger.info(f"Datos del pedido en teléfono - Datos finales: {datos_finales}")
-    logger.info(f"Productos en sesión: {len(productos_sesion)} items")
-    
-    # Validar teléfono
-    if not datos_finales['telefono']:
+    if not telefono:
         return jsonify({
             'fulfillmentText': 'Por favor proporciona tu número de teléfono para continuar con el pedido.'
         })
     
-    telefono_valido = validar_telefono(datos_finales['telefono'])
+    # Validar teléfono
+    telefono_valido = validar_telefono(telefono)
     if not telefono_valido:
         return jsonify({
             'fulfillmentText': 'El número de teléfono no es válido. Por favor proporciona un número peruano válido (ej: 987654321).'
         })
     
-    # Crear mensaje de confirmación con todos los datos disponibles
-    mensaje_confirmacion = f"Perfecto! He registrado tu teléfono: {telefono_valido}\n\n"
-    mensaje_confirmacion += "Resumen de tu pedido:\n"
+    # Guardar teléfono en sesión
+    actualizar_datos_sesion(session_id, telefono=telefono_valido, paso_actual='telefono')
     
-    # Mostrar productos si existen
-    if productos_sesion:
-        mensaje_confirmacion += "\n🛒 Productos:\n"
-        total_pedido = 0
-        for item in productos_sesion:
-            cantidad = item['cantidad']
-            producto = item['producto']
-            precio_unitario = item.get('precio', 0)
-            precio_total = precio_unitario * cantidad
-            total_pedido += precio_total
-            
-            mensaje_confirmacion += f"• {cantidad}x {producto} - S/ {precio_total:.2f}\n"
-        
-        mensaje_confirmacion += f"\n💰 Subtotal: S/ {total_pedido:.2f}\n"
-    else:
-        mensaje_confirmacion += "\n⚠️ No hay productos en el pedido\n"
+    # Generar resumen completo del pedido
+    resumen = f"Perfecto! He registrado tu teléfono: {telefono_valido}\n\n"
+    resumen += generar_resumen_pedido(session_id)
+    resumen += "\n¿Confirmas este pedido? Responde 'sí' para confirmar o 'no' para cancelar."
     
-    if datos_finales['nombre']:
-        mensaje_confirmacion += f"👤 Cliente: {datos_finales['nombre']}\n"
-    if datos_finales['fecha_entrega']:
-        mensaje_confirmacion += f"📅 Fecha: {datos_finales['fecha_entrega']}\n"
-    if datos_finales['tipo_entrega']:
-        mensaje_confirmacion += f"🚚 Tipo: {datos_finales['tipo_entrega'].title()}\n"
-    if datos_finales['direccion_entrega'] and datos_finales['tipo_entrega'] == 'delivery':
-        mensaje_confirmacion += f"📍 Dirección: {datos_finales['direccion_entrega']}\n"
-    if datos_finales['notas']:
-        mensaje_confirmacion += f"📝 Notas: {datos_finales['notas']}\n"
-    
-    mensaje_confirmacion += f"📞 Teléfono: {telefono_valido}\n\n"
-    mensaje_confirmacion += "¿Confirmas este pedido? Responde 'sí' para confirmar o 'no' para cancelar."
-    
-    return jsonify({'fulfillmentText': mensaje_confirmacion})
+    return jsonify({'fulfillmentText': resumen})
 
 def handle_pedido_productos(parameters, req):
     """
-    Maneja la captura de productos cuando el usuario especifica qué quiere comprar
+    Maneja la captura de productos cuando el usuario especifica qué quiere comprar - VERSION NUEVA
     """
     productos = parameters.get('producto', [])
     cantidades = parameters.get('number', [])
@@ -366,13 +334,9 @@ def handle_pedido_productos(parameters, req):
             'fulfillmentText': 'No pude identificar los productos que deseas. ¿Puedes especificar qué productos te gustaría comprar?\n\nEjemplo: "Quiero 2 baguettes y 1 torta de chocolate"'
         })
     
-    # Obtener productos existentes de la sesión (por si está agregando más)
-    productos_existentes = obtener_productos_sesion(session_id)
-    
     # Crear lista de productos del pedido
-    items_pedido = list(productos_existentes)  # Copiar existentes
+    items_pedido = []
     mensaje_productos = ""
-    total_items = sum(item['cantidad'] for item in productos_existentes)
     productos_no_encontrados = []
     
     # Procesar cada producto
@@ -405,8 +369,6 @@ def handle_pedido_productos(parameters, req):
                 mensaje_productos += f"• {cantidad} {producto_info['nombre']} - S/ {precio_total:.2f}\n"
             else:
                 mensaje_productos += f"• {cantidad} {producto_info['nombre']}s - S/ {precio_total:.2f}\n"
-            
-            total_items += cantidad
         else:
             # Producto no encontrado
             productos_no_encontrados.append(producto_nombre)
@@ -415,8 +377,11 @@ def handle_pedido_productos(parameters, req):
     if items_pedido:
         precio_total_pedido = sum(item['precio'] * item['cantidad'] for item in items_pedido)
         
+        # Guardar productos en sesión usando el nuevo sistema
+        agregar_productos_sesion(session_id, items_pedido)
+        
         mensaje = f"Perfecto! He agregado a tu pedido:\n\n{mensaje_productos}"
-        mensaje += f"\nTotal de productos: {total_items}\n"
+        mensaje += f"\nTotal de productos: {sum(item['cantidad'] for item in items_pedido)}\n"
         mensaje += f"💰 Subtotal: S/ {precio_total_pedido:.2f}\n\n"
         
         if productos_no_encontrados:
@@ -432,11 +397,264 @@ def handle_pedido_productos(parameters, req):
         mensaje += "¿Podrías especificar los productos de otra manera?\n"
         mensaje += "Por ejemplo: 'baguette', 'pan francés', 'torta de chocolate', etc."
     
-    # Guardar productos en sesión (usar el session_id ya obtenido)
-    guardar_productos_sesion(session_id, items_pedido)
-    
     return jsonify({
         'fulfillmentText': mensaje
+    })
+
+# ============================================================================
+# FUNCIONES AUXILIARES PARA MANEJO COMPLETO DE DATOS DE SESIÓN
+# ============================================================================
+
+def inicializar_sesion(session_id):
+    """
+    Inicializa una nueva sesión con estructura completa
+    """
+    global sesiones_activas
+    if session_id not in sesiones_activas:
+        sesiones_activas[session_id] = {
+            'productos': [],
+            'nombre': '',
+            'telefono': '',
+            'fecha_entrega': '',
+            'tipo_entrega': '',
+            'direccion_entrega': '',
+            'notas': '',
+            'timestamp': datetime.now(),
+            'paso_actual': 'inicio'
+        }
+        logger.info(f"🆕 Nueva sesión inicializada: {session_id}")
+
+def actualizar_datos_sesion(session_id, **datos):
+    """
+    Actualiza cualquier dato de la sesión
+    """
+    global sesiones_activas
+    inicializar_sesion(session_id)  # Asegurar que existe
+    
+    for key, value in datos.items():
+        if key in sesiones_activas[session_id]:
+            sesiones_activas[session_id][key] = value
+            logger.info(f"📝 Sesión {session_id[:8]}... - {key}: {value}")
+    
+    # Actualizar timestamp
+    sesiones_activas[session_id]['timestamp'] = datetime.now()
+
+def obtener_datos_sesion(session_id):
+    """
+    Obtiene todos los datos de una sesión
+    """
+    global sesiones_activas
+    if session_id not in sesiones_activas:
+        inicializar_sesion(session_id)
+    
+    return sesiones_activas[session_id].copy()
+
+def agregar_productos_sesion(session_id, productos_nuevos):
+    """
+    Agrega productos a la sesión (mantiene productos existentes)
+    """
+    global sesiones_activas
+    inicializar_sesion(session_id)
+    
+    # Obtener productos existentes
+    productos_actuales = sesiones_activas[session_id]['productos']
+    
+    # Agregar nuevos productos
+    productos_actuales.extend(productos_nuevos)
+    
+    # Actualizar sesión
+    sesiones_activas[session_id]['productos'] = productos_actuales
+    sesiones_activas[session_id]['timestamp'] = datetime.now()
+    
+    logger.info(f"🛒 Productos agregados a sesión {session_id[:8]}... - Total: {len(productos_actuales)} items")
+
+def generar_resumen_pedido(session_id):
+    """
+    Genera resumen completo del pedido
+    """
+    datos = obtener_datos_sesion(session_id)
+    
+    resumen = "📋 Resumen de tu pedido:\n\n"
+    
+    # Productos
+    if datos['productos']:
+        resumen += "🛒 Productos:\n"
+        total_pedido = 0
+        for item in datos['productos']:
+            cantidad = item['cantidad']
+            producto = item['producto']
+            precio_unitario = item.get('precio', 0)
+            precio_total = precio_unitario * cantidad
+            total_pedido += precio_total
+            resumen += f"• {cantidad}x {producto} - S/ {precio_total:.2f}\n"
+        resumen += f"\n💰 Subtotal: S/ {total_pedido:.2f}\n\n"
+    else:
+        resumen += "⚠️ No hay productos en el pedido\n\n"
+    
+    # Datos del cliente
+    if datos['nombre']:
+        resumen += f"👤 Cliente: {datos['nombre']}\n"
+    if datos['telefono']:
+        resumen += f"📞 Teléfono: {datos['telefono']}\n"
+    if datos['fecha_entrega']:
+        resumen += f"📅 Fecha: {datos['fecha_entrega']}\n"
+    if datos['tipo_entrega']:
+        resumen += f"🚚 Tipo: {datos['tipo_entrega'].title()}\n"
+    if datos['direccion_entrega'] and datos['tipo_entrega'] == 'delivery':
+        resumen += f"📍 Dirección: {datos['direccion_entrega']}\n"
+    if datos['notas']:
+        resumen += f"📝 Notas: {datos['notas']}\n"
+    
+    return resumen
+
+# ============================================================================
+# HANDLERS PARA CADA INTENT
+# ============================================================================
+
+def handle_pedido_nombre(parameters, req):
+    """
+    Maneja la captura del nombre del cliente
+    """
+    session_id = obtener_session_id(req)
+    
+    # Extraer nombre
+    person = parameters.get('person', {})
+    if isinstance(person, dict):
+        nombre = person.get('name', '').strip()
+    else:
+        nombre = person.strip() if person else ''
+    
+    if not nombre:
+        return jsonify({
+            'fulfillmentText': 'No pude capturar tu nombre. ¿Podrías repetirlo?'
+        })
+    
+    # Guardar en sesión
+    actualizar_datos_sesion(session_id, nombre=nombre, paso_actual='nombre')
+    
+    return jsonify({
+        'fulfillmentText': f'Perfecto {nombre}! ¿Para qué fecha necesitas el pedido? (mínimo 1 día de anticipación)'
+    })
+
+def handle_pedido_fecha(parameters, req):
+    """
+    Maneja la captura de la fecha de entrega
+    """
+    session_id = obtener_session_id(req)
+    
+    fecha = parameters.get('date', '').strip()
+    
+    if not fecha:
+        return jsonify({
+            'fulfillmentText': 'No pude capturar la fecha. ¿Podrías especificar para qué fecha necesitas el pedido?'
+        })
+    
+    # Validar fecha
+    try:
+        fecha_valida = validar_fecha_entrega(fecha)
+        if not fecha_valida:
+            return jsonify({
+                'fulfillmentText': 'La fecha debe ser con al menos 1 día de anticipación. ¿Podrías proporcionar otra fecha?'
+            })
+    except:
+        # Si hay error, aceptar la fecha tal como viene
+        logger.warning(f"No se pudo validar fecha: {fecha}")
+    
+    # Guardar en sesión
+    actualizar_datos_sesion(session_id, fecha_entrega=fecha, paso_actual='fecha')
+    
+    return jsonify({
+        'fulfillmentText': '¿Prefieres delivery o recoger en tienda?'
+    })
+
+def handle_pedido_delivery(parameters, req):
+    """
+    Maneja cuando el usuario elige delivery
+    """
+    session_id = obtener_session_id(req)
+    
+    # Guardar tipo de entrega
+    actualizar_datos_sesion(session_id, tipo_entrega='delivery', paso_actual='tipo_entrega')
+    
+    return jsonify({
+        'fulfillmentText': '¿Cuál es tu dirección de entrega?'
+    })
+
+def handle_pedido_recojo(parameters, req):
+    """
+    Maneja cuando el usuario elige recojo en tienda
+    """
+    session_id = obtener_session_id(req)
+    
+    # Extraer tipo de entrega del parámetro
+    tipo_entrega = parameters.get('tipo_entrega', 'recojo')
+    
+    # Guardar tipo de entrega
+    actualizar_datos_sesion(session_id, tipo_entrega=tipo_entrega, paso_actual='tipo_entrega')
+    
+    return jsonify({
+        'fulfillmentText': '¿Deseas agregar alguna nota especial al pedido?'
+    })
+
+def handle_pedido_direccion(parameters, req):
+    """
+    Maneja la captura de la dirección de entrega
+    """
+    session_id = obtener_session_id(req)
+    
+    # Extraer dirección de múltiples posibles parámetros
+    direccion = (parameters.get('direccion_entrega', '') or 
+                parameters.get('direccion', '') or
+                parameters.get('location', '') or
+                parameters.get('address', '') or
+                parameters.get('street-address', ''))
+    
+    # Si no se capturó como parámetro, usar el texto completo de la consulta
+    if not direccion:
+        direccion = req.get('queryResult', {}).get('queryText', '')
+    
+    # Debug: Log para ver qué recibimos
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"DEBUG Dirección - Parámetros recibidos: {parameters}")
+    logger.info(f"DEBUG Dirección - QueryText: {req.get('queryResult', {}).get('queryText', '')}")
+    logger.info(f"DEBUG Dirección - Dirección extraída: '{direccion}'")
+    
+    # Si es objeto de ubicación, extraer la dirección
+    if isinstance(direccion, dict):
+        direccion_str = f"{direccion.get('business-name', '')} {direccion.get('street-address', '')}".strip()
+        if not direccion_str:
+            direccion_str = str(direccion)
+    else:
+        direccion_str = str(direccion).strip()
+    
+    # Ser más permisivo con la validación - solo verificar que no esté vacío
+    if not direccion_str or direccion_str.lower() in ['', 'none', 'null']:
+        return jsonify({
+            'fulfillmentText': 'No pude capturar la dirección. ¿Podrías repetir tu dirección de entrega completa?'
+        })
+    
+    # Guardar en sesión
+    actualizar_datos_sesion(session_id, direccion_entrega=direccion_str, paso_actual='direccion')
+    
+    return jsonify({
+        'fulfillmentText': f'Perfecto! Dirección registrada: {direccion_str}\n\n¿Deseas agregar alguna nota especial al pedido?'
+    })
+
+def handle_pedido_nota(parameters, req):
+    """
+    Maneja la captura de notas especiales
+    """
+    session_id = obtener_session_id(req)
+    
+    # Extraer notas (opcional)
+    notas = parameters.get('notas', '').strip()
+    
+    # Guardar en sesión (incluso si está vacío)
+    actualizar_datos_sesion(session_id, notas=notas or 'Ninguna', paso_actual='notas')
+    
+    return jsonify({
+        'fulfillmentText': 'Por favor confirma tu número de teléfono para registrar el pedido.'
     })
 
 @app.route('/debug/sesiones', methods=['GET'])

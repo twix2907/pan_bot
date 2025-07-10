@@ -1,0 +1,37 @@
+{
+  "id": "6af165d7-b526-4518-975e-90478edcbc8a",
+  "name": "hacer.pedido.cancelar_definitivo",
+  "auto": true,
+  "contexts": [
+    "esperando_opcion_modificacion"
+  ],
+  "responses": [
+    {
+      "resetContexts": false,
+      "action": "hacer.pedido.cancelar_definitivo",
+      "affectedContexts": [],
+      "parameters": [],
+      "messages": [
+        {
+          "type": "0",
+          "title": "",
+          "textToSpeech": "",
+          "lang": "es",
+          "speech": [
+            "Pedido cancelado completamente. ¿Te puedo ayudar en algo más?\n\nPuedes:\n• Ver productos y precios\n• Hacer un nuevo pedido\n• Consultar información de la panadería"
+          ],
+          "condition": ""
+        }
+      ],
+      "speech": []
+    }
+  ],
+  "priority": 500000,
+  "webhookUsed": false,
+  "webhookForSlotFilling": false,
+  "fallbackIntent": false,
+  "events": [],
+  "conditionalResponses": [],
+  "condition": "",
+  "conditionalFollowupEvents": []
+}

@@ -1,0 +1,42 @@
+{
+  "id": "571d7e51-3468-4d32-893b-b3aeabd2b859",
+  "name": "hacer.pedido.delivery",
+  "auto": true,
+  "contexts": [
+    "esperando_tipo_entrega"
+  ],
+  "responses": [
+    {
+      "resetContexts": false,
+      "action": "hacer.pedido.delivery",
+      "affectedContexts": [
+        {
+          "name": "esperando_direccion",
+          "lifespan": 5
+        }
+      ],
+      "parameters": [],
+      "messages": [
+        {
+          "type": "0",
+          "title": "",
+          "textToSpeech": "",
+          "lang": "es",
+          "speech": [
+            "¿Cuál es tu dirección de entrega?"
+          ],
+          "condition": ""
+        }
+      ],
+      "speech": []
+    }
+  ],
+  "priority": 500000,
+  "webhookUsed": false,
+  "webhookForSlotFilling": false,
+  "fallbackIntent": false,
+  "events": [],
+  "conditionalResponses": [],
+  "condition": "",
+  "conditionalFollowupEvents": []
+}

@@ -1,0 +1,80 @@
+[
+  {
+    "id": "7bbea782-916e-455b-8643-bed3364b9fc4",
+    "data": [
+      {
+        "text": "Que me lo traigan",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "es",
+    "updated": 0
+  },
+  {
+    "id": "c84e213c-9928-4f06-8256-ebbbb4cab7fd",
+    "data": [
+      {
+        "text": "quiero delivery",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "es",
+    "updated": 0
+  },
+  {
+    "id": "4504d555-b60b-4fc2-ae16-44313b6b53d4",
+    "data": [
+      {
+        "text": "enviar a mi casa",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "es",
+    "updated": 0
+  },
+  {
+    "id": "11ae50a7-ed68-4ce6-b0ef-d4dc02228097",
+    "data": [
+      {
+        "text": "a domicilio",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "es",
+    "updated": 0
+  },
+  {
+    "id": "cd733246-0cdb-4a1a-9bae-8153faa8384d",
+    "data": [
+      {
+        "text": "envío",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "es",
+    "updated": 0
+  },
+  {
+    "id": "1cee3b0e-d098-421e-970d-44e01c559168",
+    "data": [
+      {
+        "text": "delivery",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "es",
+    "updated": 0
+  }
+]

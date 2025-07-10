@@ -1,0 +1,57 @@
+{
+  "id": "0a821bff-1cac-441f-ab48-4ff8892a9a8e",
+  "name": "hacer.pedido.recojo",
+  "auto": true,
+  "contexts": [
+    "esperando_tipo_entrega"
+  ],
+  "responses": [
+    {
+      "resetContexts": false,
+      "action": "hacer.pedido.recojo",
+      "affectedContexts": [
+        {
+          "name": "esperando_nota",
+          "lifespan": 5
+        }
+      ],
+      "parameters": [
+        {
+          "id": "2c19b867-c55e-4d9a-84eb-643f636daa97",
+          "name": "tipo_entrega",
+          "required": true,
+          "dataType": "@tipo_entrega",
+          "value": "$tipo_entrega",
+          "defaultValue": "",
+          "isList": false,
+          "prompts": [],
+          "promptMessages": [],
+          "noMatchPromptMessages": [],
+          "noInputPromptMessages": [],
+          "outputDialogContexts": []
+        }
+      ],
+      "messages": [
+        {
+          "type": "0",
+          "title": "",
+          "textToSpeech": "",
+          "lang": "es",
+          "speech": [
+            "¿Deseas agregar alguna nota especial al pedido?"
+          ],
+          "condition": ""
+        }
+      ],
+      "speech": []
+    }
+  ],
+  "priority": 500000,
+  "webhookUsed": false,
+  "webhookForSlotFilling": false,
+  "fallbackIntent": false,
+  "events": [],
+  "conditionalResponses": [],
+  "condition": "",
+  "conditionalFollowupEvents": []
+}

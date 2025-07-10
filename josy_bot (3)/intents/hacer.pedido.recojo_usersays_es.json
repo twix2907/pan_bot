@@ -1,0 +1,134 @@
+[
+  {
+    "id": "e4af5226-d95b-42ba-8867-95dc255af690",
+    "data": [
+      {
+        "text": "Voy",
+        "meta": "@tipo_entrega",
+        "alias": "tipo_entrega",
+        "userDefined": true
+      },
+      {
+        "text": " por el pedido",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "es",
+    "updated": 0
+  },
+  {
+    "id": "79fe06ef-d5ce-4b8d-86cc-8f0ecf8c95d2",
+    "data": [
+      {
+        "text": "Paso a buscar",
+        "meta": "@tipo_entrega",
+        "alias": "tipo_entrega",
+        "userDefined": true
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "es",
+    "updated": 0
+  },
+  {
+    "id": "884decd9-a921-482c-9881-e54e6d28b57f",
+    "data": [
+      {
+        "text": "Recoger ",
+        "userDefined": false
+      },
+      {
+        "text": "en tienda",
+        "meta": "@tipo_entrega",
+        "alias": "tipo_entrega",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "es",
+    "updated": 0
+  },
+  {
+    "id": "673b8958-c02b-4cf4-aa7f-3e135315e50f",
+    "data": [
+      {
+        "text": "quiero ",
+        "userDefined": false
+      },
+      {
+        "text": "recoger",
+        "meta": "@tipo_entrega",
+        "alias": "tipo_entrega",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "es",
+    "updated": 0
+  },
+  {
+    "id": "c2a9eba0-59a7-42b5-ad8e-fea5aac821c6",
+    "data": [
+      {
+        "text": "pasar a recoger",
+        "meta": "@tipo_entrega",
+        "alias": "tipo_entrega",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "es",
+    "updated": 0
+  },
+  {
+    "id": "b65c3b42-ac87-4b46-a9a4-c609b7e86de6",
+    "data": [
+      {
+        "text": "en tienda",
+        "meta": "@tipo_entrega",
+        "alias": "tipo_entrega",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "es",
+    "updated": 0
+  },
+  {
+    "id": "67f3e222-f5b8-4267-b6d0-4d60664056b9",
+    "data": [
+      {
+        "text": "recoger",
+        "meta": "@tipo_entrega",
+        "alias": "tipo_entrega",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "es",
+    "updated": 0
+  },
+  {
+    "id": "6f6b3d10-5d0f-4850-a2cd-58ebb171f4fe",
+    "data": [
+      {
+        "text": "recojo",
+        "meta": "@tipo_entrega",
+        "alias": "tipo_entrega",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "es",
+    "updated": 0
+  }
+]

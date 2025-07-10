@@ -1,0 +1,37 @@
+{
+  "id": "cf056c06-6ad4-4163-ade2-f58daa822e60",
+  "name": "hacer.pedido.cancelar_todo",
+  "auto": true,
+  "contexts": [
+    "esperando_cambio_productos"
+  ],
+  "responses": [
+    {
+      "resetContexts": false,
+      "action": "hacer.pedido.cancelar_todo",
+      "affectedContexts": [],
+      "parameters": [],
+      "messages": [
+        {
+          "type": "0",
+          "title": "",
+          "textToSpeech": "",
+          "lang": "es",
+          "speech": [
+            "Pedido cancelado. ¿Te puedo ayudar en algo más?"
+          ],
+          "condition": ""
+        }
+      ],
+      "speech": []
+    }
+  ],
+  "priority": 500000,
+  "webhookUsed": false,
+  "webhookForSlotFilling": false,
+  "fallbackIntent": false,
+  "events": [],
+  "conditionalResponses": [],
+  "condition": "",
+  "conditionalFollowupEvents": []
+}

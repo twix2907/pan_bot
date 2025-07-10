@@ -1,0 +1,35 @@
+{
+  "id": "54009c55-e719-4fe3-a81e-0e75531059ee",
+  "name": "informacion.panaderia",
+  "auto": true,
+  "contexts": [],
+  "responses": [
+    {
+      "resetContexts": false,
+      "action": "informacion.panaderia",
+      "affectedContexts": [],
+      "parameters": [],
+      "messages": [
+        {
+          "type": "0",
+          "title": "",
+          "textToSpeech": "",
+          "lang": "es",
+          "speech": [
+            "📍 Panadería Jos y Mar\n🕐 Horarios: [DEFINIR HORARIOS]\n📍 Ubicación: [DEFINIR DIRECCIÓN]\n📞 Contacto: [DEFINIR TELÉFONO]\n¿Te puedo ayudar en algo más?"
+          ],
+          "condition": ""
+        }
+      ],
+      "speech": []
+    }
+  ],
+  "priority": 500000,
+  "webhookUsed": false,
+  "webhookForSlotFilling": false,
+  "fallbackIntent": false,
+  "events": [],
+  "conditionalResponses": [],
+  "condition": "",
+  "conditionalFollowupEvents": []
+}

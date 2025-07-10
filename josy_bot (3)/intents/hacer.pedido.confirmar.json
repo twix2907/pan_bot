@@ -1,0 +1,34 @@
+{
+  "id": "293ddd16-54de-4a41-a63e-bfd8741b7e3b",
+  "name": "hacer.pedido.confirmar",
+  "auto": true,
+  "contexts": [
+    "esperando_confirmacion_pedido"
+  ],
+  "responses": [
+    {
+      "resetContexts": false,
+      "action": "hacer.pedido.confirmar",
+      "affectedContexts": [],
+      "parameters": [],
+      "messages": [
+        {
+          "type": "0",
+          "title": "",
+          "textToSpeech": "",
+          "lang": "es",
+          "condition": ""
+        }
+      ],
+      "speech": []
+    }
+  ],
+  "priority": 500000,
+  "webhookUsed": true,
+  "webhookForSlotFilling": false,
+  "fallbackIntent": false,
+  "events": [],
+  "conditionalResponses": [],
+  "condition": "",
+  "conditionalFollowupEvents": []
+}

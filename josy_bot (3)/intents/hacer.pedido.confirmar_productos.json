@@ -1,0 +1,42 @@
+{
+  "id": "df403998-f591-40da-90d9-02ebcedb790e",
+  "name": "hacer.pedido.confirmar_productos",
+  "auto": true,
+  "contexts": [
+    "esperando_confirmacion_productos"
+  ],
+  "responses": [
+    {
+      "resetContexts": false,
+      "action": "hacer.pedido.confirmar_productos",
+      "affectedContexts": [
+        {
+          "name": "esperando_nombre",
+          "lifespan": 1
+        }
+      ],
+      "parameters": [],
+      "messages": [
+        {
+          "type": "0",
+          "title": "",
+          "textToSpeech": "",
+          "lang": "es",
+          "speech": [
+            "Perfecto. Ahora necesito algunos datos para tu pedido:\n¿Cuál es tu nombre?"
+          ],
+          "condition": ""
+        }
+      ],
+      "speech": []
+    }
+  ],
+  "priority": 500000,
+  "webhookUsed": false,
+  "webhookForSlotFilling": false,
+  "fallbackIntent": false,
+  "events": [],
+  "conditionalResponses": [],
+  "condition": "",
+  "conditionalFollowupEvents": []
+}
