@@ -171,6 +171,7 @@ def webhook():
         Thread(target=limpiar_sesiones_expiradas).start()
 
         req = request.get_json()
+        logger.info(f"[DEBUG] JSON recibido en /webhook: {req}")
         intent_name = req.get('queryResult', {}).get('intent', {}).get('displayName', '')
         parameters = req.get('queryResult', {}).get('parameters', {})
         query_text = req.get('queryResult', {}).get('queryText', '')
