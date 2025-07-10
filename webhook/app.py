@@ -76,20 +76,24 @@ def twilio_webhook():
     user_msg = request.form.get('Body')
     user_number = request.form.get('From')
     logger.info(f"[Twilio] Mensaje recibido: '{user_msg}' de {user_number}")
+    logger.info(f"[Twilio] RAW request.form: {dict(request.form)}")
     if not user_msg or not user_number:
         logger.warning("[Twilio] Faltan datos Body o From")
         return Response("<Response><Message>Error: Mensaje o número no recibido</Message></Response>", mimetype='application/xml')
 
     # Medir tiempo de llamada a Dialogflow
     start_df = time.time()
+    logger.info(f"[Twilio] Enviando a Dialogflow: texto={repr(user_msg)}, session_id={repr(user_number)}")
     dialogflow_response = enviar_a_dialogflow(user_msg, session_id=user_number)
     end_df = time.time()
     logger.info(f"[Twilio] Tiempo llamada a Dialogflow: {end_df - start_df:.3f} segundos")
     logger.info(f"[Twilio] Respuesta Dialogflow: {dialogflow_response}")
     fulfillment_text = dialogflow_response.get('fulfillmentText', None)
+    logger.info(f"[Twilio] fulfillmentText recibido: {repr(fulfillment_text)}")
     if not fulfillment_text:
         # Si no hay fulfillmentText, mostrar el error completo para depuración
         fulfillment_text = f"[ERROR Dialogflow] {dialogflow_response}"
+        logger.error(f"[Twilio] fulfillmentText VACÍO. Respuesta completa: {dialogflow_response}")
 
     # Medir tiempo antes de responder a Twilio
     end_total = time.time()
@@ -97,6 +101,7 @@ def twilio_webhook():
 
     # Responde a Twilio en formato TwiML
     twiml = f"""<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Response>\n    <Message>{fulfillment_text}</Message>\n</Response>"""
+    logger.info(f"[Twilio] TwiML enviado a WhatsApp: {repr(twiml)}")
     return Response(twiml, mimetype='application/xml')
 import os
 from datetime import datetime, timedelta
