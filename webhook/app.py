@@ -2,6 +2,7 @@ import os
 import tempfile
 import base64
 from flask import Flask, request, jsonify, Response
+from flask_cors import CORS
 import requests
 
 
@@ -28,6 +29,7 @@ setup_google_credentials()
 
 # Crear aplicación Flask (debe estar antes de cualquier @app.route)
 app = Flask(__name__)
+CORS(app)
 
 
 # --- INTEGRACIÓN TWILIO <-> DIALOGFLOW (SDK OFICIAL) ---
@@ -842,13 +844,32 @@ def debug_sesiones():
 @app.route('/productos/<categoria>', methods=['GET'])
 def get_productos_categoria(categoria):
     """
-    Endpoint directo para consultar productos por categoría
+    Endpoint para consultar productos por categoría y búsqueda instantánea.
     """
-    productos = get_productos_por_categoria(categoria)
-    return jsonify({
-        'categoria': categoria,
-        'productos': productos
-    })
+    from models import get_productos_por_categoria
+    busqueda = request.args.get('q', '').strip()
+    if categoria == 'todos':
+        # Obtener todos los productos
+        query = "SELECT id, nombre, categoria, precio, descripcion, disponible FROM productos ORDER BY categoria, nombre"
+        from database import execute_query
+        productos = execute_query(query)
+    else:
+        productos = get_productos_por_categoria(categoria)
+    if busqueda:
+        productos = [p for p in productos if busqueda.lower() in p['nombre'].lower()]
+    return jsonify(productos)
+
+@app.route('/productos/<int:producto_id>/disponible', methods=['PATCH'])
+def patch_producto_disponible(producto_id):
+    """
+    Endpoint para cambiar la disponibilidad de un producto.
+    """
+    from database import execute_query, execute_insert
+    data = request.get_json()
+    disponible = data.get('disponible', True)
+    query = "UPDATE productos SET disponible = %s WHERE id = %s"
+    execute_insert(query, (disponible, producto_id))
+    return jsonify({'id': producto_id, 'disponible': disponible})
 
 @app.route('/test-db', methods=['GET'])
 def test_database():
@@ -1038,3 +1059,21 @@ if __name__ == '__main__':
     
     # Ejecutar aplicación
     app.run(host='0.0.0.0', port=port, debug=os.getenv('FLASK_ENV') == 'development')
+@app.route('/productos', methods=['POST'])
+def add_producto():
+    """
+    Endpoint para añadir un nuevo producto.
+    """
+    from database import execute_insert
+    data = request.get_json()
+    nombre = data.get('nombre', '').strip()
+    categoria = data.get('categoria', '').strip()
+    precio = float(data.get('precio', 0))
+    descripcion = data.get('descripcion', '').strip()
+    disponible = bool(data.get('disponible', True))
+    query = """
+    INSERT INTO productos (nombre, categoria, precio, descripcion, disponible)
+    VALUES (%s, %s, %s, %s, %s)
+    """
+    execute_insert(query, (nombre, categoria, precio, descripcion, disponible))
+    return jsonify({'ok': True, 'nombre': nombre})

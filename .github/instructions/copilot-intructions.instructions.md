@@ -2,6 +2,9 @@
 applyTo: '**'
 ---
 
+recuerda la division de archivos, para mejor mantenibilidad, no hagas archivos demasiado largos
+
+
 REGLA OBLIGATORIA SIEMPRE y cuando no entiendas algo:
 Siempre preguntame si no entiendes algo o necesitas más información. pideme aclaraciones antes de continuar.No hagas suposiciones. no asumas nada.si hay algo que no entiendes, pregunta. si hay algo que debes corregirme, hazlo. si hay algo que no está claro, acláralo. si hay algo que no sabes, pregúntame.
 
