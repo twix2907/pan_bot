@@ -1089,3 +1089,21 @@ def add_producto():
     """
     execute_insert(query, (nombre, categoria, precio, descripcion, disponible))
     return jsonify({'ok': True, 'nombre': nombre})
+
+@app.route('/productos/<int:producto_id>', methods=['PUT', 'PATCH'])
+def editar_producto(producto_id):
+    """
+    Endpoint para editar un producto existente.
+    """
+    from database import execute_insert
+    data = request.get_json()
+    nombre = data.get('nombre', '').strip()
+    categoria = data.get('categoria', '').strip()
+    precio = float(data.get('precio', 0))
+    descripcion = data.get('descripcion', '').strip()
+    disponible = bool(data.get('disponible', True))
+    query = """
+    UPDATE productos SET nombre=%s, categoria=%s, precio=%s, descripcion=%s, disponible=%s WHERE id=%s
+    """
+    execute_insert(query, (nombre, categoria, precio, descripcion, disponible, producto_id))
+    return jsonify({'ok': True, 'id': producto_id})
