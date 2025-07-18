@@ -5,3 +5,4 @@ requests==2.31.0
 twilio==8.8.0
 gunicorn==21.2.0
 google-cloud-dialogflow
+flask-cors
