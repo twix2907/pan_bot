@@ -1,14 +1,3 @@
-# Cambiar estado de pedido
-@app.route('/pedidos/<int:pedido_id>/estado', methods=['PATCH'])
-def cambiar_estado_pedido(pedido_id):
-    data = request.get_json()
-    nuevo_estado = data.get('estado')
-    if nuevo_estado not in ['en_espera', 'preparando', 'listo', 'entregado', 'pendiente', 'confirmado', 'cancelado']:
-        return jsonify({'ok': False, 'error': 'Estado no válido'}), 400
-    from database import execute_update
-    query = "UPDATE pedidos SET estado = %s WHERE id = %s"
-    execute_update(query, (nuevo_estado, pedido_id))
-    return jsonify({'ok': True, 'id': pedido_id, 'estado': nuevo_estado})
 import os
 import tempfile
 import base64
@@ -75,6 +64,18 @@ def enviar_a_dialogflow(texto, session_id):
     except Exception as e:
         return {'fulfillmentText': f'Error usando Dialogflow SDK: {str(e)}'}
 
+
+# Cambiar estado de pedido
+@app.route('/pedidos/<int:pedido_id>/estado', methods=['PATCH'])
+def cambiar_estado_pedido(pedido_id):
+    data = request.get_json()
+    nuevo_estado = data.get('estado')
+    if nuevo_estado not in ['en_espera', 'preparando', 'listo', 'entregado', 'pendiente', 'confirmado', 'cancelado']:
+        return jsonify({'ok': False, 'error': 'Estado no válido'}), 400
+    from database import execute_update
+    query = "UPDATE pedidos SET estado = %s WHERE id = %s"
+    execute_update(query, (nuevo_estado, pedido_id))
+    return jsonify({'ok': True, 'id': pedido_id, 'estado': nuevo_estado})
 
 # --- ENDPOINT PARA TWILIO ---
 @app.route('/twilio', methods=['POST'])
