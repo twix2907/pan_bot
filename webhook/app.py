@@ -119,7 +119,8 @@ from models import (
     agregar_item_pedido,
     get_pedido_completo,
     get_todas_categorias,
-    buscar_producto_por_nombre
+    buscar_producto_por_nombre,
+    get_pedidos
 )
 from utils import (
     validar_telefono,
@@ -858,6 +859,29 @@ def test_database():
         return jsonify({'status': 'success', 'message': 'Conexión a base de datos exitosa'})
     else:
         return jsonify({'status': 'error', 'message': 'Error en conexión a base de datos'}), 500
+
+@app.route('/pedidos', methods=['GET'])
+def get_pedidos():
+    """
+    Endpoint para obtener la lista de pedidos, filtrable por estado y fecha.
+    """
+    from models import get_pedidos
+    estado = request.args.get('estado', None)
+    fecha = request.args.get('fecha', None)
+    pedidos = get_pedidos(estado=estado, fecha=fecha)
+    return jsonify(pedidos)
+
+@app.route('/pedidos/<int:pedido_id>', methods=['GET'])
+def get_pedido_detalle(pedido_id):
+    """
+    Endpoint para obtener el detalle de un pedido específico.
+    """
+    from models import get_pedido_completo
+    pedido = get_pedido_completo(pedido_id)
+    if pedido:
+        return jsonify(pedido)
+    else:
+        return jsonify({'error': 'Pedido no encontrado'}), 404
 
 def extraer_datos_contexto(req):
     """

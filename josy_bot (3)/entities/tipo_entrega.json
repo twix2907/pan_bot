@@ -1,9 +1,0 @@
-{
-  "id": "e213af8d-68f5-413b-99f7-bd0cfe8cfabd",
-  "name": "tipo_entrega",
-  "isOverridable": true,
-  "isEnum": false,
-  "isRegexp": false,
-  "automatedExpansion": false,
-  "allowFuzzyExtraction": false
-}

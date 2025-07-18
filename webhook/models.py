@@ -166,3 +166,25 @@ def get_productos_mas_vendidos(limite=5):
     LIMIT %s
     """
     return execute_query(query, (limite,))
+
+def get_pedidos(estado=None, fecha=None):
+    """
+    Devuelve la lista de pedidos, filtrable por estado y fecha (YYYY-MM-DD).
+    """
+    query = '''
+    SELECT p.id, p.fecha_entrega, p.tipo_entrega, p.estado, p.total, c.nombre as cliente_nombre
+    FROM pedidos p
+    JOIN clientes c ON p.cliente_id = c.id
+    '''
+    params = []
+    filtros = []
+    if estado:
+        filtros.append('p.estado = %s')
+        params.append(estado)
+    if fecha:
+        filtros.append('DATE(p.fecha_entrega) = %s')
+        params.append(fecha)
+    if filtros:
+        query += ' WHERE ' + ' AND '.join(filtros)
+    query += ' ORDER BY p.fecha_entrega DESC, p.id DESC'
+    return execute_query(query, tuple(params))
