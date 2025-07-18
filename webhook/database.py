@@ -61,6 +61,25 @@ def execute_insert(query, params=None):
         print(f"Error ejecutando insert: {error}")
         return None
 
+def execute_update(query, params=None):
+    """
+    Ejecuta una consulta UPDATE y retorna el número de filas afectadas
+    """
+    connection = get_db_connection()
+    if not connection:
+        return None
+    try:
+        cursor = connection.cursor()
+        cursor.execute(query, params or ())
+        affected_rows = cursor.rowcount
+        connection.commit()
+        cursor.close()
+        connection.close()
+        return affected_rows
+    except mysql.connector.Error as error:
+        print(f"Error ejecutando update: {error}")
+        return None
+
 def test_connection():
     """
     Prueba la conexión a la base de datos

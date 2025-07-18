@@ -72,7 +72,7 @@ def cambiar_estado_pedido(pedido_id):
     nuevo_estado = data.get('estado')
     if nuevo_estado not in ['en_espera', 'preparando', 'listo', 'entregado', 'pendiente', 'confirmado', 'cancelado']:
         return jsonify({'ok': False, 'error': 'Estado no válido'}), 400
-    from database import execute_update
+    from webhook.database import execute_update
     query = "UPDATE pedidos SET estado = %s WHERE id = %s"
     execute_update(query, (nuevo_estado, pedido_id))
     return jsonify({'ok': True, 'id': pedido_id, 'estado': nuevo_estado})
